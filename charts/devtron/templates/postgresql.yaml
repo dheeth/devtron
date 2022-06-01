@@ -293,6 +293,7 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 1Gi
+  {{- if not $.Release.IsUpgrade }}
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -302,4 +303,9 @@ spec:
         resources:
           requests:
             storage: {{ .persistence.volumeSize }}
+  {{- else }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: data-postgresql-postgresql-0
+  {{- end }}
 {{- end }}
