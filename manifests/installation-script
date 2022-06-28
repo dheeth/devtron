@@ -1,4 +1,4 @@
-LTAG="nats-vol";
+LTAG="nats-vol-install";
 REPO_RAW_URL="https://raw.githubusercontent.com/dheeth/devtron/";
 
 operatorSecret = kubectl get secret -n devtroncd devtron-operator-secret;
