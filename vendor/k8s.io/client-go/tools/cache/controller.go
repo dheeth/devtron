@@ -21,21 +21,12 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/clock"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/clock"
 )
 
-// This file implements a low-level controller that is used in
-// sharedIndexInformer, which is an implementation of
-// SharedIndexInformer.  Such informers, in turn, are key components
-// in the high level controllers that form the backbone of the
-// Kubernetes control plane.  Look at those for examples, or the
-// example in
-// https://github.com/kubernetes/client-go/tree/master/examples/workqueue
-// .
-
-// Config contains all the settings for one of these low-level controllers.
+// Config contains all the settings for a Controller.
 type Config struct {
 	// The queue for your objects - has to be a DeltaFIFO due to
 	// assumptions in the implementation. Your Process() function
@@ -45,36 +36,31 @@ type Config struct {
 	// Something that can list and watch your objects.
 	ListerWatcher
 
-	// Something that can process a popped Deltas.
+	// Something that can process your objects.
 	Process ProcessFunc
 
-	// ObjectType is an example object of the type this controller is
-	// expected to handle.  Only the type needs to be right, except
-	// that when that is `unstructured.Unstructured` the object's
-	// `"apiVersion"` and `"kind"` must also be right.
+	// The type of your objects.
 	ObjectType runtime.Object
 
-	// FullResyncPeriod is the period at which ShouldResync is considered.
+	// Reprocess everything at least this often.
+	// Note that if it takes longer for you to clear the queue than this
+	// period, you will end up processing items in the order determined
+	// by FIFO.Replace(). Currently, this is random. If this is a
+	// problem, we can change that replacement policy to append new
+	// things to the end of the queue instead of replacing the entire
+	// queue.
 	FullResyncPeriod time.Duration
 
-	// ShouldResync is periodically used by the reflector to determine
-	// whether to Resync the Queue. If ShouldResync is `nil` or
-	// returns true, it means the reflector should proceed with the
-	// resync.
+	// ShouldResync, if specified, is invoked when the controller's reflector determines the next
+	// periodic sync should occur. If this returns true, it means the reflector should proceed with
+	// the resync.
 	ShouldResync ShouldResyncFunc
 
 	// If true, when Process() returns an error, re-enqueue the object.
 	// TODO: add interface to let you inject a delay/backoff or drop
 	//       the object completely if desired. Pass the object in
-	//       question to this interface as a parameter.  This is probably moot
-	//       now that this functionality appears at a higher level.
+	//       question to this interface as a parameter.
 	RetryOnError bool
-
-	// Called whenever the ListAndWatch drops the connection with an error.
-	WatchErrorHandler WatchErrorHandler
-
-	// WatchListPageSize is the requested chunk size of initial and relist watch lists.
-	WatchListPageSize int64
 }
 
 // ShouldResyncFunc is a type of function that indicates if a reflector should perform a
@@ -85,7 +71,7 @@ type ShouldResyncFunc func() bool
 // ProcessFunc processes a single object.
 type ProcessFunc func(obj interface{}) error
 
-// `*controller` implements Controller
+// Controller is a generic controller framework.
 type controller struct {
 	config         Config
 	reflector      *Reflector
@@ -93,22 +79,9 @@ type controller struct {
 	clock          clock.Clock
 }
 
-// Controller is a low-level controller that is parameterized by a
-// Config and used in sharedIndexInformer.
 type Controller interface {
-	// Run does two things.  One is to construct and run a Reflector
-	// to pump objects/notifications from the Config's ListerWatcher
-	// to the Config's Queue and possibly invoke the occasional Resync
-	// on that Queue.  The other is to repeatedly Pop from the Queue
-	// and process with the Config's ProcessFunc.  Both of these
-	// continue until `stopCh` is closed.
 	Run(stopCh <-chan struct{})
-
-	// HasSynced delegates to the Config's Queue
 	HasSynced() bool
-
-	// LastSyncResourceVersion delegates to the Reflector when there
-	// is one, otherwise returns the empty string
 	LastSyncResourceVersion() string
 }
 
@@ -121,7 +94,7 @@ func New(c *Config) Controller {
 	return ctlr
 }
 
-// Run begins processing items, and will continue until a value is sent down stopCh or it is closed.
+// Run begins processing items, and will continue until a value is sent down stopCh.
 // It's an error to call Run more than once.
 // Run blocks; call via go.
 func (c *controller) Run(stopCh <-chan struct{}) {
@@ -137,22 +110,18 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 		c.config.FullResyncPeriod,
 	)
 	r.ShouldResync = c.config.ShouldResync
-	r.WatchListPageSize = c.config.WatchListPageSize
 	r.clock = c.clock
-	if c.config.WatchErrorHandler != nil {
-		r.watchErrorHandler = c.config.WatchErrorHandler
-	}
 
 	c.reflectorMutex.Lock()
 	c.reflector = r
 	c.reflectorMutex.Unlock()
 
 	var wg wait.Group
+	defer wg.Wait()
 
 	wg.StartWithChannel(stopCh, r.Run)
 
 	wait.Until(c.processLoop, time.Second, stopCh)
-	wg.Wait()
 }
 
 // Returns true once this controller has completed an initial resource listing
@@ -161,8 +130,6 @@ func (c *controller) HasSynced() bool {
 }
 
 func (c *controller) LastSyncResourceVersion() string {
-	c.reflectorMutex.RLock()
-	defer c.reflectorMutex.RUnlock()
 	if c.reflector == nil {
 		return ""
 	}
@@ -182,7 +149,7 @@ func (c *controller) processLoop() {
 	for {
 		obj, err := c.config.Queue.Pop(PopProcessFunc(c.config.Process))
 		if err != nil {
-			if err == ErrFIFOClosed {
+			if err == FIFOClosedError {
 				return
 			}
 			if c.config.RetryOnError {
@@ -193,11 +160,9 @@ func (c *controller) processLoop() {
 	}
 }
 
-// ResourceEventHandler can handle notifications for events that
-// happen to a resource. The events are informational only, so you
-// can't return an error.  The handlers MUST NOT modify the objects
-// received; this concerns not only the top level of structure but all
-// the data structures reachable from it.
+// ResourceEventHandler can handle notifications for events that happen to a
+// resource. The events are informational only, so you can't return an
+// error.
 //  * OnAdd is called when an object is added.
 //  * OnUpdate is called when an object is modified. Note that oldObj is the
 //      last known state of the object-- it is possible that several changes
@@ -217,8 +182,7 @@ type ResourceEventHandler interface {
 
 // ResourceEventHandlerFuncs is an adaptor to let you easily specify as many or
 // as few of the notification functions as you want while still implementing
-// ResourceEventHandler.  This adapter does not remove the prohibition against
-// modifying the objects.
+// ResourceEventHandler.
 type ResourceEventHandlerFuncs struct {
 	AddFunc    func(obj interface{})
 	UpdateFunc func(oldObj, newObj interface{})
@@ -250,7 +214,6 @@ func (r ResourceEventHandlerFuncs) OnDelete(obj interface{}) {
 // in, ensuring the appropriate nested handler method is invoked. An object
 // that starts passing the filter after an update is considered an add, and an
 // object that stops passing the filter after an update is considered a delete.
-// Like the handlers, the filter MUST NOT modify the objects it is given.
 type FilteringResourceEventHandler struct {
 	FilterFunc func(obj interface{}) bool
 	Handler    ResourceEventHandler
@@ -322,10 +285,10 @@ func NewInformer(
 	// This will hold the client state, as we know it.
 	clientState := NewStore(DeletionHandlingMetaNamespaceKeyFunc)
 
-	return clientState, newInformer(lw, objType, resyncPeriod, h, clientState, nil)
+	return clientState, newInformer(lw, objType, resyncPeriod, h, clientState)
 }
 
-// NewIndexerInformer returns an Indexer and a Controller for populating the index
+// NewIndexerInformer returns a Indexer and a controller for populating the index
 // while also providing event notifications. You should only used the returned
 // Index for Get/List operations; Add/Modify/Deletes will cause the event
 // notifications to be faulty.
@@ -351,59 +314,7 @@ func NewIndexerInformer(
 	// This will hold the client state, as we know it.
 	clientState := NewIndexer(DeletionHandlingMetaNamespaceKeyFunc, indexers)
 
-	return clientState, newInformer(lw, objType, resyncPeriod, h, clientState, nil)
-}
-
-// TransformFunc allows for transforming an object before it will be processed
-// and put into the controller cache and before the corresponding handlers will
-// be called on it.
-// TransformFunc (similarly to ResourceEventHandler functions) should be able
-// to correctly handle the tombstone of type cache.DeletedFinalStateUnknown
-//
-// The most common usage pattern is to clean-up some parts of the object to
-// reduce component memory usage if a given component doesn't care about them.
-// given controller doesn't care for them
-type TransformFunc func(interface{}) (interface{}, error)
-
-// NewTransformingInformer returns a Store and a controller for populating
-// the store while also providing event notifications. You should only used
-// the returned Store for Get/List operations; Add/Modify/Deletes will cause
-// the event notifications to be faulty.
-// The given transform function will be called on all objects before they will
-// put put into the Store and corresponding Add/Modify/Delete handlers will
-// be invokved for them.
-func NewTransformingInformer(
-	lw ListerWatcher,
-	objType runtime.Object,
-	resyncPeriod time.Duration,
-	h ResourceEventHandler,
-	transformer TransformFunc,
-) (Store, Controller) {
-	// This will hold the client state, as we know it.
-	clientState := NewStore(DeletionHandlingMetaNamespaceKeyFunc)
-
-	return clientState, newInformer(lw, objType, resyncPeriod, h, clientState, transformer)
-}
-
-// NewTransformingIndexerInformer returns an Indexer and a controller for
-// populating the index while also providing event notifications. You should
-// only used the returned Index for Get/List operations; Add/Modify/Deletes
-// will cause the event notifications to be faulty.
-// The given transform function will be called on all objects before they will
-// be put into the Index and corresponding Add/Modify/Delete handlers will
-// be invoked for them.
-func NewTransformingIndexerInformer(
-	lw ListerWatcher,
-	objType runtime.Object,
-	resyncPeriod time.Duration,
-	h ResourceEventHandler,
-	indexers Indexers,
-	transformer TransformFunc,
-) (Indexer, Controller) {
-	// This will hold the client state, as we know it.
-	clientState := NewIndexer(DeletionHandlingMetaNamespaceKeyFunc, indexers)
-
-	return clientState, newInformer(lw, objType, resyncPeriod, h, clientState, transformer)
+	return clientState, newInformer(lw, objType, resyncPeriod, h, clientState)
 }
 
 // newInformer returns a controller for populating the store while also
@@ -426,15 +337,11 @@ func newInformer(
 	resyncPeriod time.Duration,
 	h ResourceEventHandler,
 	clientState Store,
-	transformer TransformFunc,
 ) Controller {
 	// This will hold incoming changes. Note how we pass clientState in as a
 	// KeyLister, that way resync operations will result in the correct set
 	// of update/delete deltas.
-	fifo := NewDeltaFIFOWithOptions(DeltaFIFOOptions{
-		KnownObjects:          clientState,
-		EmitDeltaTypeReplaced: true,
-	})
+	fifo := NewDeltaFIFO(MetaNamespaceKeyFunc, clientState)
 
 	cfg := &Config{
 		Queue:            fifo,
@@ -446,33 +353,24 @@ func newInformer(
 		Process: func(obj interface{}) error {
 			// from oldest to newest
 			for _, d := range obj.(Deltas) {
-				obj := d.Object
-				if transformer != nil {
-					var err error
-					obj, err = transformer(obj)
-					if err != nil {
-						return err
-					}
-				}
-
 				switch d.Type {
-				case Sync, Replaced, Added, Updated:
-					if old, exists, err := clientState.Get(obj); err == nil && exists {
-						if err := clientState.Update(obj); err != nil {
+				case Sync, Added, Updated:
+					if old, exists, err := clientState.Get(d.Object); err == nil && exists {
+						if err := clientState.Update(d.Object); err != nil {
 							return err
 						}
-						h.OnUpdate(old, obj)
+						h.OnUpdate(old, d.Object)
 					} else {
-						if err := clientState.Add(obj); err != nil {
+						if err := clientState.Add(d.Object); err != nil {
 							return err
 						}
-						h.OnAdd(obj)
+						h.OnAdd(d.Object)
 					}
 				case Deleted:
-					if err := clientState.Delete(obj); err != nil {
+					if err := clientState.Delete(d.Object); err != nil {
 						return err
 					}
-					h.OnDelete(obj)
+					h.OnDelete(d.Object)
 				}
 			}
 			return nil

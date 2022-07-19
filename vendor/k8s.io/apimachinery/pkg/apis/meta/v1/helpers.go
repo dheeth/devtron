@@ -17,9 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -38,13 +36,13 @@ func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
 	if len(ps.MatchLabels)+len(ps.MatchExpressions) == 0 {
 		return labels.Everything(), nil
 	}
-	requirements := make([]labels.Requirement, 0, len(ps.MatchLabels)+len(ps.MatchExpressions))
+	selector := labels.NewSelector()
 	for k, v := range ps.MatchLabels {
 		r, err := labels.NewRequirement(k, selection.Equals, []string{v})
 		if err != nil {
 			return nil, err
 		}
-		requirements = append(requirements, *r)
+		selector = selector.Add(*r)
 	}
 	for _, expr := range ps.MatchExpressions {
 		var op selection.Operator
@@ -64,10 +62,8 @@ func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
 		if err != nil {
 			return nil, err
 		}
-		requirements = append(requirements, *r)
+		selector = selector.Add(*r)
 	}
-	selector := labels.NewSelector()
-	selector = selector.Add(requirements...)
 	return selector, nil
 }
 
@@ -156,7 +152,7 @@ func SetAsLabelSelector(ls labels.Set) *LabelSelector {
 	}
 
 	selector := &LabelSelector{
-		MatchLabels: make(map[string]string, len(ls)),
+		MatchLabels: make(map[string]string),
 	}
 	for label, value := range ls {
 		selector.MatchLabels[label] = value
@@ -201,20 +197,6 @@ func SetMetaDataAnnotation(obj *ObjectMeta, ann string, value string) {
 		obj.Annotations = make(map[string]string)
 	}
 	obj.Annotations[ann] = value
-}
-
-// HasLabel returns a bool if passed in label exists
-func HasLabel(obj ObjectMeta, label string) bool {
-	_, found := obj.Labels[label]
-	return found
-}
-
-// SetMetaDataLabel sets the label and value
-func SetMetaDataLabel(obj *ObjectMeta, label string, value string) {
-	if obj.Labels == nil {
-		obj.Labels = make(map[string]string)
-	}
-	obj.Labels[label] = value
 }
 
 // SingleObject returns a ListOptions for watching a single object.
@@ -268,31 +250,18 @@ func ResetObjectMetaForStatus(meta, existingMeta Object) {
 	meta.SetAnnotations(existingMeta.GetAnnotations())
 	meta.SetFinalizers(existingMeta.GetFinalizers())
 	meta.SetOwnerReferences(existingMeta.GetOwnerReferences())
-	// managedFields must be preserved since it's been modified to
-	// track changed fields in the status update.
-	//meta.SetManagedFields(existingMeta.GetManagedFields())
+	meta.SetManagedFields(existingMeta.GetManagedFields())
 }
 
 // MarshalJSON implements json.Marshaler
-// MarshalJSON may get called on pointers or values, so implement MarshalJSON on value.
-// http://stackoverflow.com/questions/21390979/custom-marshaljson-never-gets-called-in-go
-func (f FieldsV1) MarshalJSON() ([]byte, error) {
-	if f.Raw == nil {
-		return []byte("null"), nil
-	}
-	return f.Raw, nil
+func (f Fields) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&f.Map)
 }
 
 // UnmarshalJSON implements json.Unmarshaler
-func (f *FieldsV1) UnmarshalJSON(b []byte) error {
-	if f == nil {
-		return errors.New("metav1.Fields: UnmarshalJSON on nil pointer")
-	}
-	if !bytes.Equal(b, []byte("null")) {
-		f.Raw = append(f.Raw[0:0], b...)
-	}
-	return nil
+func (f *Fields) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &f.Map)
 }
 
-var _ json.Marshaler = FieldsV1{}
-var _ json.Unmarshaler = &FieldsV1{}
+var _ json.Marshaler = Fields{}
+var _ json.Unmarshaler = &Fields{}

@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
+
+	"github.com/k0kubun/pp"
 )
 
 type Issues struct {
@@ -51,19 +54,13 @@ func (p *Issues) Delete(io *IssuesOptions) (interface{}, error) {
 }
 
 func (p *Issues) Update(io *IssuesOptions) (interface{}, error) {
-	data, err := p.buildIssueBody(io)
-	if err != nil {
-		return nil, err
-	}
+	data := p.buildIssueBody(io)
 	urlStr := p.c.requestUrl("/repositories/%s/%s/issues/%s", io.Owner, io.RepoSlug, io.ID)
 	return p.c.execute("PUT", urlStr, data)
 }
 
 func (p *Issues) Create(io *IssuesOptions) (interface{}, error) {
-	data, err := p.buildIssueBody(io)
-	if err != nil {
-		return nil, err
-	}
+	data := p.buildIssueBody(io)
 	urlStr := p.c.requestUrl("/repositories/%s/%s/issues", io.Owner, io.RepoSlug)
 	return p.c.execute("POST", urlStr, data)
 }
@@ -112,7 +109,7 @@ func (p *Issues) DeleteWatch(io *IssuesOptions) error {
 	return err
 }
 
-func (p *Issues) buildIssueBody(io *IssuesOptions) (string, error) {
+func (p *Issues) buildIssueBody(io *IssuesOptions) string {
 	body := map[string]interface{}{}
 
 	// This feld is required
@@ -163,10 +160,11 @@ func (p *Issues) buildIssueBody(io *IssuesOptions) (string, error) {
 
 	data, err := json.Marshal(body)
 	if err != nil {
-		return "", err
+		pp.Println(err)
+		os.Exit(9)
 	}
 
-	return string(data), nil
+	return string(data)
 }
 
 func (p *Issues) GetComments(ico *IssueCommentsOptions) (interface{}, error) {

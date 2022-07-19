@@ -1,7 +1,6 @@
 package user
 
 import (
-	"fmt"
 	"github.com/devtron-labs/devtron/api/bean"
 	"github.com/devtron-labs/devtron/pkg/user/repository"
 	"go.uber.org/zap"
@@ -9,8 +8,7 @@ import (
 
 type SelfRegistrationRolesService interface {
 	Check() (CheckResponse, error)
-	SelfRegister(emailId string) (*bean.UserInfo, error)
-	CheckAndCreateUserIfConfigured(emailId string) bool
+	SelfRegister(emailId string)
 }
 
 type SelfRegistrationRolesServiceImpl struct {
@@ -74,42 +72,20 @@ func (impl *SelfRegistrationRolesServiceImpl) Check() (CheckResponse, error) {
 	checkResponse.Enabled = false
 	return checkResponse, nil
 }
-func (impl *SelfRegistrationRolesServiceImpl) SelfRegister(emailId string) (*bean.UserInfo, error) {
+func (impl *SelfRegistrationRolesServiceImpl) SelfRegister(emailId string) {
+
 	roles, err := impl.Check()
 	if err != nil || roles.Enabled == false {
-		return nil, err
+		return
 	}
-	impl.logger.Infow("self register start")
+
 	userInfo := &bean.UserInfo{
 		EmailId:    emailId,
 		Roles:      roles.Roles,
 		SuperAdmin: false,
 	}
-
-	userInfos, err := impl.userService.SelfRegisterUserIfNotExists(userInfo)
+	_, err = impl.userService.SelfRegisterUserIfNotExists(userInfo)
 	if err != nil {
 		impl.logger.Errorw("error while register user", "error", err)
-		return nil, err
 	}
-	impl.logger.Errorw("registerd user", "user", userInfos)
-	if len(userInfos) > 0 {
-		return userInfos[0], nil
-	} else {
-		return nil, fmt.Errorf("user not created")
-	}
-}
-
-func (impl *SelfRegistrationRolesServiceImpl) CheckAndCreateUserIfConfigured(emailId string) bool {
-	exists := impl.userService.UserExists(emailId)
-	if !exists {
-		impl.logger.Infow("self registering user,  ", "email", emailId)
-		user, err := impl.SelfRegister(emailId)
-		if err != nil {
-			impl.logger.Errorw("error while register user", "error", err)
-		} else if user != nil && user.UserId > 0 {
-			exists = true
-		}
-	}
-	impl.logger.Infow("user status", "email", emailId, "status", exists)
-	return exists
 }

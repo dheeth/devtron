@@ -18,7 +18,6 @@
 package util
 
 import (
-	"context"
 	"encoding/json"
 	error2 "errors"
 	"flag"
@@ -166,7 +165,7 @@ func (impl K8sUtil) CreateNsIfNotExists(namespace string, clusterConfig *Cluster
 }
 
 func (impl K8sUtil) checkIfNsExists(namespace string, client *v12.CoreV1Client) (exists bool, err error) {
-	ns, err := client.Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	ns, err := client.Namespaces().Get(namespace, metav1.GetOptions{})
 	//ns, err := impl.k8sClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 	impl.logger.Debugw("ns fetch", "name", namespace, "res", ns)
 	if errors.IsNotFound(err) {
@@ -181,7 +180,7 @@ func (impl K8sUtil) checkIfNsExists(namespace string, client *v12.CoreV1Client) 
 
 func (impl K8sUtil) createNs(namespace string, client *v12.CoreV1Client) (ns *v1.Namespace, err error) {
 	nsSpec := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	ns, err = client.Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
+	ns, err = client.Namespaces().Create(nsSpec)
 	if err != nil {
 		return nil, err
 	} else {
@@ -190,12 +189,12 @@ func (impl K8sUtil) createNs(namespace string, client *v12.CoreV1Client) (ns *v1
 }
 
 func (impl K8sUtil) deleteNs(namespace string, client *v12.CoreV1Client) error {
-	err := client.Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{})
+	err := client.Namespaces().Delete(namespace, &metav1.DeleteOptions{})
 	return err
 }
 
 func (impl K8sUtil) GetConfigMap(namespace string, name string, client *v12.CoreV1Client) (*v1.ConfigMap, error) {
-	cm, err := client.ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	cm, err := client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	} else {
@@ -204,7 +203,7 @@ func (impl K8sUtil) GetConfigMap(namespace string, name string, client *v12.Core
 }
 
 func (impl K8sUtil) CreateConfigMap(namespace string, cm *v1.ConfigMap, client *v12.CoreV1Client) (*v1.ConfigMap, error) {
-	cm, err := client.ConfigMaps(namespace).Create(context.Background(), cm, metav1.CreateOptions{})
+	cm, err := client.ConfigMaps(namespace).Create(cm)
 	if err != nil {
 		return nil, err
 	} else {
@@ -213,7 +212,7 @@ func (impl K8sUtil) CreateConfigMap(namespace string, cm *v1.ConfigMap, client *
 }
 
 func (impl K8sUtil) UpdateConfigMap(namespace string, cm *v1.ConfigMap, client *v12.CoreV1Client) (*v1.ConfigMap, error) {
-	cm, err := client.ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{})
+	cm, err := client.ConfigMaps(namespace).Update(cm)
 	if err != nil {
 		return nil, err
 	} else {
@@ -230,7 +229,7 @@ func (impl K8sUtil) PatchConfigMap(namespace string, clusterConfig *ClusterConfi
 	if err != nil {
 		panic(err)
 	}
-	cm, err := client.ConfigMaps(namespace).Patch(context.Background(), name, types.PatchType(types.MergePatchType), b, metav1.PatchOptions{})
+	cm, err := client.ConfigMaps(namespace).Patch(name, types.PatchType(types.MergePatchType), b)
 	if err != nil {
 		return nil, err
 	} else {
@@ -256,7 +255,7 @@ func (impl K8sUtil) PatchConfigMapJsonType(namespace string, clusterConfig *Clus
 		panic(err)
 	}
 
-	cm, err := client.ConfigMaps(namespace).Patch(context.Background(), name, types.PatchType(types.JSONPatchType), b, metav1.PatchOptions{})
+	cm, err := client.ConfigMaps(namespace).Patch(name, types.PatchType(types.JSONPatchType), b)
 	if err != nil {
 		return nil, err
 	} else {
@@ -272,7 +271,7 @@ type JsonPatchType struct {
 }
 
 func (impl K8sUtil) GetSecret(namespace string, name string, client *v12.CoreV1Client) (*v1.Secret, error) {
-	secret, err := client.Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	secret, err := client.Secrets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	} else {
@@ -287,7 +286,7 @@ func (impl K8sUtil) CreateSecret(namespace string, data map[string][]byte, secre
 		},
 		Data: data,
 	}
-	secret, err := client.Secrets(namespace).Create(context.Background(), secret, metav1.CreateOptions{})
+	secret, err := client.Secrets(namespace).Create(secret)
 	if err != nil {
 		return nil, err
 	} else {
@@ -296,7 +295,7 @@ func (impl K8sUtil) CreateSecret(namespace string, data map[string][]byte, secre
 }
 
 func (impl K8sUtil) UpdateSecret(namespace string, secret *v1.Secret, client *v12.CoreV1Client) (*v1.Secret, error) {
-	secret, err := client.Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+	secret, err := client.Secrets(namespace).Update(secret)
 	if err != nil {
 		return nil, err
 	} else {
@@ -312,14 +311,14 @@ func (impl K8sUtil) DeleteJob(namespace string, name string, clusterConfig *Clus
 	}
 	jobs := clientSet.BatchV1().Jobs(namespace)
 
-	job, err := jobs.Get(context.Background(), name, metav1.GetOptions{})
+	job, err := jobs.Get(name, metav1.GetOptions{})
 	if err != nil && errors.IsNotFound(err) {
 		impl.logger.Errorw("get job err, DeleteJob", "err", err)
 		return nil
 	}
 
 	if job != nil {
-		err := jobs.Delete(context.Background(), name, metav1.DeleteOptions{})
+		err := jobs.Delete(name, &metav1.DeleteOptions{})
 		if err != nil && !errors.IsNotFound(err) {
 			impl.logger.Errorw("delete err, DeleteJob", "err", err)
 			return err
@@ -337,17 +336,17 @@ func (impl K8sUtil) CreateJob(namespace string, name string, clusterConfig *Clus
 	time.Sleep(5 * time.Second)
 
 	jobs := clientSet.BatchV1().Jobs(namespace)
-	_, err = jobs.Get(context.Background(), name, metav1.GetOptions{})
+	_, err = jobs.Get(name, metav1.GetOptions{})
 	if err == nil {
 		impl.logger.Errorw("get job err, CreateJob", "err", err)
 		time.Sleep(5 * time.Second)
-		_, err = jobs.Get(context.Background(), name, metav1.GetOptions{})
+		_, err = jobs.Get(name, metav1.GetOptions{})
 		if err == nil {
 			return error2.New("job deletion takes more time than expected, please try after sometime")
 		}
 	}
 
-	_, err = jobs.Create(context.Background(), job, metav1.CreateOptions{})
+	_, err = jobs.Create(job)
 	if err != nil {
 		impl.logger.Errorw("create err, CreateJob", "err", err)
 		return err
@@ -369,7 +368,7 @@ func (impl K8sUtil) DeletePodByLabel(namespace string, labels string, clusterCon
 	time.Sleep(2 * time.Second)
 
 	pods := clientSet.CoreV1().Pods(namespace)
-	podList, err := pods.List(context.Background(), metav1.ListOptions{LabelSelector: labels})
+	podList, err := pods.List(metav1.ListOptions{LabelSelector: labels})
 	if err != nil && errors.IsNotFound(err) {
 		impl.logger.Errorw("get pod err, DeletePod", "err", err)
 		return nil
@@ -378,7 +377,7 @@ func (impl K8sUtil) DeletePodByLabel(namespace string, labels string, clusterCon
 	for _, pod := range (*podList).Items {
 		if pod.Status.Phase != Running {
 			podName := pod.ObjectMeta.Name
-			err := pods.Delete(context.Background(), podName, metav1.DeleteOptions{})
+			err := pods.Delete(podName, &metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				impl.logger.Errorw("delete err, DeletePod", "err", err)
 				return err
@@ -422,7 +421,7 @@ func (impl K8sUtil) DeleteAndCreateJob(content []byte, namespace string, cluster
 }
 
 func (impl K8sUtil) ListNamespaces(client *v12.CoreV1Client) (*v1.NamespaceList, error) {
-	nsList, err := client.Namespaces().List(context.Background(), metav1.ListOptions{})
+	nsList, err := client.Namespaces().List(metav1.ListOptions{})
 	if errors.IsNotFound(err) {
 		return nsList, nil
 	} else if err != nil {
@@ -449,7 +448,7 @@ func (impl K8sUtil) GetResourceInfoByLabelSelector(namespace string, labelSelect
 		impl.logger.Errorw("cluster config error", "err", err)
 		return nil, err
 	}
-	pods, err := client.Pods(namespace).List(context.Background(), metav1.ListOptions{
+	pods, err := client.Pods(namespace).List(metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {

@@ -2,11 +2,11 @@ package bitbucket
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/url"
 	"strconv"
-	"strings"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type Diff struct {
@@ -14,21 +14,21 @@ type Diff struct {
 }
 
 type DiffStatRes struct {
-	Page      int         `json:"page,omitempty"`
-	Pagelen   int         `json:"pagelen,omitempty"`
-	Size      int         `json:"size,omitempty"`
-	Next      string      `json:"next,omitempty"`
-	Previous  string      `json:"previous,omitempty"`
-	DiffStats []*DiffStat `json:"values,omitempty"`
+	Page      int
+	Pagelen   int
+	MaxDepth  int
+	Size      int
+	Next      string
+	DiffStats []DiffStat
 }
 
 type DiffStat struct {
-	Type         string                 `json:"type,omitempty"`
-	Status       string                 `json:"status,omitempty"`
-	LinesRemoved int                    `json:"lines_removed,omitempty"`
-	LinedAdded   int                    `json:"lines_added,omitempty"`
-	Old          map[string]interface{} `json:"old,omitempty"`
-	New          map[string]interface{} `json:"new,omitempty"`
+	Type         string
+	Status       string
+	LinesRemoved int
+	LinedAdded   int
+	Old          map[string]interface{}
+	New          map[string]interface{}
 }
 
 func (d *Diff) GetDiff(do *DiffOptions) (interface{}, error) {
@@ -72,10 +72,6 @@ func (d *Diff) GetDiffStat(dso *DiffStatOptions) (*DiffStatRes, error) {
 		params.Add("max_depth", strconv.Itoa(dso.MaxDepth))
 	}
 
-	if len(dso.Fields) > 0 {
-		params.Add("fields", cleanFields(dso.Fields))
-	}
-
 	urlStr := d.c.requestUrl("/repositories/%s/%s/diffstat/%s?%s", dso.Owner, dso.RepoSlug,
 		dso.Spec,
 		params.Encode())
@@ -93,20 +89,54 @@ func (d *Diff) GetDiffStat(dso *DiffStatOptions) (*DiffStatRes, error) {
 
 func decodeDiffStat(diffStatResponseStr string) (*DiffStatRes, error) {
 
-	var diffStatRes DiffStatRes
-
-	err := json.Unmarshal([]byte(diffStatResponseStr), &diffStatRes)
+	var diffStatResponseMap map[string]interface{}
+	err := json.Unmarshal([]byte(diffStatResponseStr), &diffStatResponseMap)
 	if err != nil {
-		return nil, fmt.Errorf("DiffStat decode error: %w", err)
+		return nil, err
 	}
 
-	return &diffStatRes, nil
-}
+	diffStatArray := diffStatResponseMap["values"].([]interface{})
+	var diffStatsSlice []DiffStat
+	for _, diffStatEntry := range diffStatArray {
+		var diffStat DiffStat
+		err = mapstructure.Decode(diffStatEntry, &diffStat)
+		if err == nil {
+			diffStatsSlice = append(diffStatsSlice, diffStat)
+		}
+	}
 
-// cleanFields combines all query params in the slice of field strigs into a sigle string
-// and removes any whitespace before returing the string.
-func cleanFields(fields []string) string {
-	interS := strings.Join(fields, ",")
-	s := strings.ReplaceAll(interS, " ", "")
-	return s
+	page, ok := diffStatResponseMap["page"].(float64)
+	if !ok {
+		page = 0
+	}
+
+	pagelen, ok := diffStatResponseMap["pagelen"].(float64)
+	if !ok {
+		pagelen = 0
+	}
+
+	max_depth, ok := diffStatResponseMap["max_depth"].(float64)
+	if !ok {
+		max_depth = 0
+	}
+
+	size, ok := diffStatResponseMap["size"].(float64)
+	if !ok {
+		size = 0
+	}
+
+	next, ok := diffStatResponseMap["next"].(string)
+	if !ok {
+		next = ""
+	}
+
+	diffStats := DiffStatRes{
+		Page:      int(page),
+		Pagelen:   int(pagelen),
+		MaxDepth:  int(max_depth),
+		Size:      int(size),
+		Next:      next,
+		DiffStats: diffStatsSlice,
+	}
+	return &diffStats, nil
 }

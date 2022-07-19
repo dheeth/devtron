@@ -21,10 +21,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/argoproj/gitops-engine/pkg/health"
 	client2 "github.com/devtron-labs/devtron/api/helm-app"
 	"github.com/devtron-labs/devtron/pkg/chart"
-	"github.com/devtron-labs/devtron/util/argo"
 	chart2 "k8s.io/helm/pkg/proto/hapi/chart"
 	"net/url"
 	"path"
@@ -41,8 +39,8 @@ import (
 	"github.com/devtron-labs/devtron/pkg/user/casbin"
 	util3 "github.com/devtron-labs/devtron/pkg/util"
 
-	application2 "github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
-	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	application2 "github.com/argoproj/argo-cd/pkg/apiclient/application"
+	"github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/devtron-labs/devtron/api/bean"
 	"github.com/devtron-labs/devtron/client/argocdServer"
@@ -109,7 +107,6 @@ type AppServiceImpl struct {
 	helmAppClient                    client2.HelmAppClient
 	chartRefRepository               chartRepoRepository.ChartRefRepository
 	chartService                     chart.ChartService
-	argoUserService                  argo.ArgoUserService
 }
 
 type AppService interface {
@@ -152,8 +149,7 @@ func NewAppService(
 	deploymentTemplateHistoryService history2.DeploymentTemplateHistoryService,
 	chartTemplateService ChartTemplateService, refChartDir chartRepoRepository.RefChartDir,
 	chartRefRepository chartRepoRepository.ChartRefRepository,
-	chartService chart.ChartService, helmAppClient client2.HelmAppClient,
-	argoUserService argo.ArgoUserService) *AppServiceImpl {
+	chartService chart.ChartService, helmAppClient client2.HelmAppClient) *AppServiceImpl {
 	appServiceImpl := &AppServiceImpl{
 		environmentConfigRepository:      environmentConfigRepository,
 		mergeUtil:                        mergeUtil,
@@ -194,7 +190,6 @@ func NewAppService(
 		chartRefRepository:               chartRefRepository,
 		chartService:                     chartService,
 		helmAppClient:                    helmAppClient,
-		argoUserService:                  argoUserService,
 	}
 	return appServiceImpl
 }
@@ -281,8 +276,8 @@ func (impl AppServiceImpl) UpdateApplicationStatusAndCheckIsHealthy(app v1alpha1
 	}
 
 	if string(application.Healthy) != deploymentStatus.Status {
-		if deploymentStatus.Status == string(app.Status.Health.Status) {
-			impl.logger.Debug("not updating same statuses from " + deploymentStatus.Status + " to " + string(app.Status.Health.Status))
+		if deploymentStatus.Status == app.Status.Health.Status {
+			impl.logger.Debug("not updating same statuses from " + deploymentStatus.Status + " to " + app.Status.Health.Status)
 			return isHealthy, nil
 		}
 
@@ -314,7 +309,7 @@ func (impl AppServiceImpl) UpdateApplicationStatusAndCheckIsHealthy(app v1alpha1
 				AppName:   app.Name,
 				AppId:     deploymentStatus.AppId,
 				EnvId:     deploymentStatus.EnvId,
-				Status:    string(app.Status.Health.Status),
+				Status:    app.Status.Health.Status,
 				CreatedOn: time.Now(),
 				UpdatedOn: time.Now(),
 			}
@@ -423,7 +418,7 @@ func (impl AppServiceImpl) releasePipeline(pipeline *pipelineConfig.Pipeline, ar
 		ForceTrigger: true,
 	}
 
-	ctx, err := impl.buildACDContext()
+	ctx, err := impl.buildACDSynchContext()
 	if err != nil {
 		impl.logger.Errorw("error in creating acd synch context", "pipelineId", pipeline.Id, "artifactId", artifact.Id, "err", err)
 		return err
@@ -438,15 +433,8 @@ func (impl AppServiceImpl) releasePipeline(pipeline *pipelineConfig.Pipeline, ar
 	return err
 }
 
-func (impl AppServiceImpl) buildACDContext() (acdContext context.Context, err error) {
-	acdToken, err := impl.argoUserService.GetLatestDevtronArgoCdUserToken()
-	if err != nil {
-		impl.logger.Errorw("error in getting acd token", "err", err)
-		return nil, err
-	}
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "token", acdToken)
-	return ctx, nil
+func (impl AppServiceImpl) buildACDSynchContext() (acdContext context.Context, err error) {
+	return impl.tokenCache.BuildACDSynchContext()
 }
 
 func (impl AppServiceImpl) getDbMigrationOverride(overrideRequest *bean.ValuesOverrideRequest, artifact *repository.CiArtifact, isRollback bool) (overrideJson []byte, err error) {
@@ -1064,8 +1052,7 @@ func (impl AppServiceImpl) synchCD(pipeline *pipelineConfig.Pipeline, ctx contex
 	req := new(application2.ApplicationSyncRequest)
 	pipelineName := pipeline.App.AppName + "-" + envOverride.Environment.Name
 	req.Name = &pipelineName
-	prune := true
-	req.Prune = &prune
+	req.Prune = true
 	if ctx == nil {
 		impl.logger.Errorw("err in syncing ACD, ctx is NULL", "pipelineId", overrideRequest.PipelineId)
 		return
@@ -1411,7 +1398,6 @@ func (impl AppServiceImpl) updateArgoPipeline(appId int, pipelineName string, en
 		return false, err
 	}
 	argoAppName := fmt.Sprintf("%s-%s", app.AppName, envModel.Name)
-	impl.logger.Infow("received payload, updateArgoPipeline", "appId", appId, "pipelineName", pipelineName, "envId", envOverride.TargetEnvironment, "argoAppName", argoAppName, "context", ctx)
 	application, err := impl.acdClient.Get(ctx, &application2.ApplicationQuery{Name: &argoAppName})
 	if err != nil {
 		impl.logger.Errorw("no argo app exists", "app", argoAppName, "pipeline", pipelineName)
@@ -1428,9 +1414,7 @@ func (impl AppServiceImpl) updateArgoPipeline(appId int, pipelineName string, en
 			if err != nil {
 				impl.logger.Errorw("error in creating patch", "err", err)
 			}
-			reqString := string(reqbyte)
-			patchType := "merge"
-			_, err = impl.acdClient.Patch(ctx, &application2.ApplicationPatchRequest{Patch: &reqString, Name: &argoAppName, PatchType: &patchType})
+			_, err = impl.acdClient.Patch(ctx, &application2.ApplicationPatchRequest{Patch: string(reqbyte), Name: &argoAppName, PatchType: "merge"})
 			if err != nil {
 				impl.logger.Errorw("error in creating argo pipeline ", "name", pipelineName, "patch", string(reqbyte), "err", err)
 				return false, err
@@ -1460,7 +1444,7 @@ func (impl *AppServiceImpl) UpdateCdWorkflowRunnerByACDObject(app v1alpha1.Appli
 		impl.logger.Errorw("error on update cd workflow runner, fetch failed for runner type", "wfr", wfr, "app", app, "err", err)
 		return err
 	}
-	wfr.Status = string(app.Status.Health.Status)
+	wfr.Status = app.Status.Health.Status
 	wfr.FinishedOn = time.Now()
 	err = impl.cdWorkflowRepository.UpdateWorkFlowRunner(&wfr)
 	if err != nil {
@@ -1487,17 +1471,13 @@ func (impl *AppServiceImpl) hpaCheckBeforeTrigger(ctx context.Context, appName s
 			reqReplicaCount := templateMap["replicaCount"].(float64)
 			reqMaxReplicas := asd["MaxReplicas"].(float64)
 			reqMinReplicas := asd["MinReplicas"].(float64)
-			version := ""
-			group := autoscaling.ServiceName
-			kind := "HorizontalPodAutoscaler"
-			resourceName := fmt.Sprintf("%s-%s", appName, "hpa")
 			query := &application2.ApplicationResourceRequest{
 				Name:         &appName,
-				Version:      &version,
-				Group:        &group,
-				Kind:         &kind,
-				ResourceName: &resourceName,
-				Namespace:    &namespace,
+				Version:      "",
+				Group:        autoscaling.ServiceName,
+				Kind:         "HorizontalPodAutoscaler",
+				ResourceName: fmt.Sprintf("%s-%s", appName, "hpa"),
+				Namespace:    namespace,
 			}
 			recv, err := impl.acdClient.GetResource(ctx, query)
 			impl.logger.Debugw("resource manifest get replica count", "response", recv)
@@ -1506,9 +1486,9 @@ func (impl *AppServiceImpl) hpaCheckBeforeTrigger(ctx context.Context, appName s
 				middleware.AcdGetResourceCounter.WithLabelValues(strconv.Itoa(appId), namespace, appName).Inc()
 				return merged
 			}
-			if recv != nil && len(*recv.Manifest) > 0 {
+			if recv != nil && len(recv.Manifest) > 0 {
 				resourceManifest := make(map[string]interface{})
-				err := json.Unmarshal([]byte(*recv.Manifest), &resourceManifest)
+				err := json.Unmarshal([]byte(recv.Manifest), &resourceManifest)
 				if err != nil {
 					impl.logger.Errorw("unmarshal failed for hpa check", "err", err)
 					return merged
@@ -1696,7 +1676,7 @@ func (impl AppServiceImpl) createHelmAppForCdPipeline(overrideRequest *bean.Valu
 				Name:         pipeline.Name,
 				WorkflowType: bean.CD_WORKFLOW_TYPE_DEPLOY,
 				ExecutorType: pipelineConfig.WORKFLOW_EXECUTOR_TYPE_AWF,
-				Status:       string(health.HealthStatusProgressing),
+				Status:       v1alpha1.HealthStatusProgressing,
 				TriggeredBy:  overrideRequest.UserId,
 				StartedOn:    triggeredAt,
 				CdWorkflowId: cdWorkflowId,
@@ -1707,7 +1687,7 @@ func (impl AppServiceImpl) createHelmAppForCdPipeline(overrideRequest *bean.Valu
 				return false, err
 			}
 		} else {
-			cdWf.Status = string(health.HealthStatusProgressing)
+			cdWf.Status = v1alpha1.HealthStatusProgressing
 			cdWf.FinishedOn = time.Now()
 			err = impl.cdWorkflowRepository.UpdateWorkFlowRunner(&cdWf)
 			if err != nil {

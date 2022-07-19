@@ -21,8 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/argoproj/gitops-engine/pkg/health"
-	"github.com/devtron-labs/devtron/util/argo"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +33,7 @@ import (
 	"github.com/devtron-labs/devtron/pkg/user/casbin"
 	util3 "github.com/devtron-labs/devtron/pkg/util"
 
+	"github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/devtron-labs/devtron/api/bean"
 	client "github.com/devtron-labs/devtron/client/events"
 	"github.com/devtron-labs/devtron/client/pubsub"
@@ -94,7 +93,6 @@ type WorkflowDagExecutorImpl struct {
 	scanResultRepository          security.ImageScanResultRepository
 	appWorkflowRepository         appWorkflow.AppWorkflowRepository
 	prePostCdScriptHistoryService history2.PrePostCdScriptHistoryService
-	argoUserService               argo.ArgoUserService
 }
 
 type CiArtifactDTO struct {
@@ -138,8 +136,7 @@ func NewWorkflowDagExecutorImpl(Logger *zap.SugaredLogger, pipelineRepository pi
 	eventClient client.EventClient, cvePolicyRepository security.CvePolicyRepository,
 	scanResultRepository security.ImageScanResultRepository,
 	appWorkflowRepository appWorkflow.AppWorkflowRepository,
-	prePostCdScriptHistoryService history2.PrePostCdScriptHistoryService,
-	argoUserService argo.ArgoUserService) *WorkflowDagExecutorImpl {
+	prePostCdScriptHistoryService history2.PrePostCdScriptHistoryService) *WorkflowDagExecutorImpl {
 	wde := &WorkflowDagExecutorImpl{logger: Logger,
 		pipelineRepository:            pipelineRepository,
 		cdWorkflowRepository:          cdWorkflowRepository,
@@ -164,7 +161,6 @@ func NewWorkflowDagExecutorImpl(Logger *zap.SugaredLogger, pipelineRepository pi
 		scanResultRepository:          scanResultRepository,
 		appWorkflowRepository:         appWorkflowRepository,
 		prePostCdScriptHistoryService: prePostCdScriptHistoryService,
-		argoUserService:               argoUserService,
 	}
 	err := util4.AddStream(wde.pubsubClient.JetStrCtxt, util4.ORCHESTRATOR_STREAM, util4.CI_RUNNER_STREAM)
 	if err != nil {
@@ -829,7 +825,7 @@ func (impl *WorkflowDagExecutorImpl) updatePreviousDeploymentStatus(currentRunne
 		//update current WF with error status
 	} else {
 		//update n-1th  deploy status as aborted if not termainal(Healthy, Degraded)
-		terminalStatus := []string{string(health.HealthStatusHealthy), string(health.HealthStatusDegraded), WorkflowAborted, WorkflowFailed}
+		terminalStatus := []string{v1alpha1.HealthStatusHealthy, v1alpha1.HealthStatusDegraded, WorkflowAborted, WorkflowFailed}
 		previousNonTerminalRunners, err := impl.cdWorkflowRepository.FindPreviousCdWfRunnerByStatus(pipelineId, currentRunner.Id, terminalStatus)
 		if err != nil {
 			impl.logger.Errorw("error fetching previous wf runner, updating cd wf runner status,", "err", err, "currentRunner", currentRunner)
@@ -839,8 +835,8 @@ func (impl *WorkflowDagExecutorImpl) updatePreviousDeploymentStatus(currentRunne
 			return nil
 		}
 		for _, previousRunner := range previousNonTerminalRunners {
-			if previousRunner.Status == string(health.HealthStatusHealthy) ||
-				previousRunner.Status == string(health.HealthStatusDegraded) ||
+			if previousRunner.Status == v1alpha1.HealthStatusHealthy ||
+				previousRunner.Status == v1alpha1.HealthStatusDegraded ||
 				previousRunner.Status == WorkflowAborted ||
 				previousRunner.Status == WorkflowFailed {
 				//terminal status return
@@ -1254,7 +1250,7 @@ func (impl *WorkflowDagExecutorImpl) subscribeHibernateBulkAction() error {
 			UserId:        deploymentGroupAppWithEnv.UserId,
 			RequestType:   deploymentGroupAppWithEnv.RequestType,
 		}
-		ctx, err := impl.buildACDContext()
+		ctx, err := impl.buildACDSynchContext()
 		if err != nil {
 			impl.logger.Errorw("error in creating acd synch context", "err", err)
 			return
@@ -1268,13 +1264,6 @@ func (impl *WorkflowDagExecutorImpl) subscribeHibernateBulkAction() error {
 	return err
 }
 
-func (impl *WorkflowDagExecutorImpl) buildACDContext() (acdContext context.Context, err error) {
-	acdToken, err := impl.argoUserService.GetLatestDevtronArgoCdUserToken()
-	if err != nil {
-		impl.logger.Errorw("error in getting acd token", "err", err)
-		return nil, err
-	}
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "token", acdToken)
-	return ctx, nil
+func (impl *WorkflowDagExecutorImpl) buildACDSynchContext() (acdContext context.Context, err error) {
+	return impl.tokenCache.BuildACDSynchContext()
 }

@@ -214,11 +214,6 @@ type jsOpts struct {
 	aecb MsgErrHandler
 	// Maximum in flight.
 	maxap int
-	// the domain that produced the pre
-	domain string
-	// enables protocol tracing
-	trace       TraceCB
-	shouldTrace bool
 }
 
 const (
@@ -257,55 +252,18 @@ func (opt jsOptFn) configureJSContext(opts *jsOpts) error {
 	return opt(opts)
 }
 
-// TraceOperation indicates the direction of traffic flow to TraceCB
-type TraceOperation int
-
-const (
-	// TraceSent indicate the payload is being sent to subj
-	TraceSent TraceOperation = 0
-	// TraceReceived indicate the payload is being received on subj
-	TraceReceived TraceOperation = 1
-)
-
-// TraceCB is called to trace API interactions for the JetStream Context
-type TraceCB func(op TraceOperation, subj string, payload []byte, hdr Header)
-
-// TraceFunc enables tracing of JetStream API interactions
-func TraceFunc(cb TraceCB) JSOpt {
-	return jsOptFn(func(js *jsOpts) error {
-		js.trace = cb
-		js.shouldTrace = true
-		return nil
-	})
-}
-
 // Domain changes the domain part of JetSteam API prefix.
 func Domain(domain string) JSOpt {
-	if domain == _EMPTY_ {
-		return APIPrefix(_EMPTY_)
-	}
-
-	return jsOptFn(func(js *jsOpts) error {
-		js.domain = domain
-		js.pre = fmt.Sprintf(jsDomainT, domain)
-
-		return nil
-	})
-
+	return APIPrefix(fmt.Sprintf(jsDomainT, domain))
 }
 
 // APIPrefix changes the default prefix used for the JetStream API.
 func APIPrefix(pre string) JSOpt {
 	return jsOptFn(func(js *jsOpts) error {
-		if pre == _EMPTY_ {
-			return nil
-		}
-
 		js.pre = pre
 		if !strings.HasSuffix(js.pre, ".") {
 			js.pre = js.pre + "."
 		}
-
 		return nil
 	})
 }
@@ -859,11 +817,6 @@ func (ctx ContextOpt) configurePublish(opts *pubOpts) error {
 	return nil
 }
 
-func (ctx ContextOpt) configureSubscribe(opts *subOpts) error {
-	opts.ctx = ctx
-	return nil
-}
-
 func (ctx ContextOpt) configurePull(opts *pullOpts) error {
 	opts.ctx = ctx
 	return nil
@@ -970,9 +923,6 @@ type jsSub struct {
 	fcd    uint64
 	fciseq uint64
 	csfct  *time.Timer
-
-	// Cancellation function to cancel context on drain/unsubscribe.
-	cancel func()
 }
 
 // Deletes the JS Consumer.
@@ -1251,7 +1201,6 @@ func (js *js) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync,
 		consumer      = o.consumer
 		isDurable     = o.cfg.Durable != _EMPTY_
 		consumerBound = o.bound
-		ctx           = o.ctx
 		notFoundErr   bool
 		lookupErr     bool
 		nc            = js.nc
@@ -1398,13 +1347,6 @@ func (js *js) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync,
 		deliver = nc.newInbox()
 	}
 
-	// In case this has a context, then create a child context that
-	// is possible to cancel via unsubscribe / drain.
-	var cancel func()
-	if ctx != nil {
-		ctx, cancel = context.WithCancel(ctx)
-	}
-
 	jsi := &jsSub{
 		js:       js,
 		stream:   stream,
@@ -1417,7 +1359,6 @@ func (js *js) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync,
 		pull:     isPullMode,
 		nms:      nms,
 		psubj:    subj,
-		cancel:   cancel,
 	}
 
 	// Check if we are manual ack.
@@ -1457,15 +1398,12 @@ func (js *js) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync,
 
 		var ccSubj string
 		if isDurable {
-			ccSubj = js.apiSubj(fmt.Sprintf(apiDurableCreateT, stream, cfg.Durable))
+			ccSubj = fmt.Sprintf(apiDurableCreateT, stream, cfg.Durable)
 		} else {
-			ccSubj = js.apiSubj(fmt.Sprintf(apiConsumerCreateT, stream))
+			ccSubj = fmt.Sprintf(apiConsumerCreateT, stream)
 		}
 
-		if js.opts.shouldTrace {
-			js.opts.trace(TraceSent, ccSubj, j, nil)
-		}
-		resp, err := nc.Request(ccSubj, j, js.opts.wait)
+		resp, err := nc.Request(js.apiSubj(ccSubj), j, js.opts.wait)
 		if err != nil {
 			cleanUpSub()
 			if err == ErrNoResponders {
@@ -1473,10 +1411,6 @@ func (js *js) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync,
 			}
 			return nil, err
 		}
-		if js.opts.shouldTrace {
-			js.opts.trace(TraceReceived, ccSubj, resp.Data, resp.Header)
-		}
-
 		var cinfo consumerResponse
 		err = json.Unmarshal(resp.Data, &cinfo)
 		if err != nil {
@@ -1554,14 +1488,6 @@ func (js *js) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync,
 	// and process flow control.
 	if sub.Type() == ChanSubscription && hasFC {
 		sub.chanSubcheckForFlowControlResponse()
-	}
-
-	// Wait for context to get canceled if there is one.
-	if ctx != nil {
-		go func() {
-			<-ctx.Done()
-			sub.Unsubscribe()
-		}()
 	}
 
 	return sub, nil
@@ -1701,26 +1627,6 @@ func (sub *Subscription) resetOrderedConsumer(sseq uint64) {
 		return
 	}
 
-	var maxStr string
-	// If there was an AUTO_UNSUB done, we need to adjust the new value
-	// to send after the SUB for the new sid.
-	if sub.max > 0 {
-		if sub.jsi.fciseq < sub.max {
-			adjustedMax := sub.max - sub.jsi.fciseq
-			maxStr = strconv.Itoa(int(adjustedMax))
-		} else {
-			// We are already at the max, so we should just unsub the
-			// existing sub and be done
-			go func(sid int64) {
-				nc.mu.Lock()
-				nc.bw.appendString(fmt.Sprintf(unsubProto, sid, _EMPTY_))
-				nc.kickFlusher()
-				nc.mu.Unlock()
-			}(sub.sid)
-			return
-		}
-	}
-
 	// Quick unsubscribe. Since we know this is a simple push subscriber we do in place.
 	osid := sub.applyNewSID()
 
@@ -1740,9 +1646,6 @@ func (sub *Subscription) resetOrderedConsumer(sseq uint64) {
 		nc.mu.Lock()
 		nc.bw.appendString(fmt.Sprintf(unsubProto, osid, _EMPTY_))
 		nc.bw.appendString(fmt.Sprintf(subProto, newDeliver, _EMPTY_, nsid))
-		if maxStr != _EMPTY_ {
-			nc.bw.appendString(fmt.Sprintf(unsubProto, nsid, maxStr))
-		}
 		nc.kickFlusher()
 		nc.mu.Unlock()
 
@@ -1838,7 +1741,7 @@ func (sub *Subscription) scheduleFlowControlResponse(reply string) {
 func (sub *Subscription) activityCheck() {
 	sub.mu.Lock()
 	jsi := sub.jsi
-	if jsi == nil || sub.closed {
+	if jsi == nil {
 		sub.mu.Unlock()
 		return
 	}
@@ -1847,9 +1750,10 @@ func (sub *Subscription) activityCheck() {
 	jsi.hbc.Reset(jsi.hbi)
 	jsi.active = false
 	nc := sub.conn
+	closed := sub.closed
 	sub.mu.Unlock()
 
-	if !active {
+	if !active && !closed {
 		nc.mu.Lock()
 		if errCB := nc.Opts.AsyncErrorCB; errCB != nil {
 			nc.ach.push(func() { errCB(nc, sub, ErrConsumerNotActive) })
@@ -1977,7 +1881,6 @@ type subOpts struct {
 	mack bool
 	// For an ordered consumer.
 	ordered bool
-	ctx     context.Context
 }
 
 // OrderedConsumer will create a fifo direct/ephemeral consumer for in order delivery of messages.
@@ -2160,7 +2063,7 @@ func RateLimit(n uint64) SubOpt {
 // BindStream binds a consumer to a stream explicitly based on a name.
 // When a stream name is not specified, the library uses the subscribe
 // subject as a way to find the stream name. It is done by making a request
-// to the server to get list of stream names that have a filter for this
+// to the server to get list of stream names that have a fileter for this
 // subject. If the returned list contains a single stream, then this
 // stream name will be used, otherwise the `ErrNoMatchingStream` is returned.
 // To avoid the stream lookup, provide the stream name with this function.
@@ -2502,7 +2405,7 @@ func (js *js) getConsumerInfo(stream, consumer string) (*ConsumerInfo, error) {
 
 func (js *js) getConsumerInfoContext(ctx context.Context, stream, consumer string) (*ConsumerInfo, error) {
 	ccInfoSubj := fmt.Sprintf(apiConsumerInfoT, stream, consumer)
-	resp, err := js.apiRequestWithContext(ctx, js.apiSubj(ccInfoSubj), nil)
+	resp, err := js.nc.RequestWithContext(ctx, js.apiSubj(ccInfoSubj), nil)
 	if err != nil {
 		if err == ErrNoResponders {
 			err = ErrJetStreamNotEnabled
@@ -2523,27 +2426,11 @@ func (js *js) getConsumerInfoContext(ctx context.Context, stream, consumer strin
 	return info.ConsumerInfo, nil
 }
 
-// a RequestWithContext with tracing via TraceCB
-func (js *js) apiRequestWithContext(ctx context.Context, subj string, data []byte) (*Msg, error) {
-	if js.opts.shouldTrace {
-		js.opts.trace(TraceSent, subj, data, nil)
-	}
-	resp, err := js.nc.RequestWithContext(ctx, subj, data)
-	if err != nil {
-		return nil, err
-	}
-	if js.opts.shouldTrace {
-		js.opts.trace(TraceReceived, subj, resp.Data, resp.Header)
-	}
-
-	return resp, nil
-}
-
 func (m *Msg) checkReply() (*js, *jsSub, error) {
 	if m == nil || m.Sub == nil {
 		return nil, nil, ErrMsgNotBound
 	}
-	if m.Reply == _EMPTY_ {
+	if m.Reply == "" {
 		return nil, nil, ErrMsgNoReply
 	}
 	sub := m.Sub
@@ -2577,7 +2464,7 @@ func (m *Msg) ackReply(ackType []byte, sync bool, opts ...AckOpt) error {
 
 	// Skip if already acked.
 	if atomic.LoadUint32(&m.ackd) == 1 {
-		return ErrMsgAlreadyAckd
+		return ErrInvalidJSAck
 	}
 
 	m.Sub.mu.Lock()

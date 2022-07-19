@@ -46,7 +46,6 @@ type ClusterBean struct {
 	AgentInstallationStage  int                        `json:"agentInstallationStage,notnull"` // -1=external, 0=not triggered, 1=progressing, 2=success, 3=fails
 	K8sVersion              string                     `json:"k8sVersion"`
 	HasConfigOrUrlChanged   bool                       `json:"-"`
-	ErrorInConnecting       string                     `json:"-"`
 }
 
 type PrometheusAuth struct {
@@ -241,8 +240,6 @@ func (impl *ClusterServiceImpl) FindAll() ([]*ClusterBean, error) {
 			ServerUrl:              m.ServerUrl,
 			Active:                 m.Active,
 			K8sVersion:             m.K8sVersion,
-			ErrorInConnecting:      m.ErrorInConnecting,
-			Config:                 m.Config,
 		})
 	}
 	return beans, nil
@@ -264,7 +261,6 @@ func (impl *ClusterServiceImpl) FindAllActive() ([]ClusterBean, error) {
 			AgentInstallationStage: m.AgentInstallationStage,
 			Config:                 m.Config,
 			K8sVersion:             m.K8sVersion,
-			ErrorInConnecting:      m.ErrorInConnecting,
 		})
 	}
 	return beans, nil

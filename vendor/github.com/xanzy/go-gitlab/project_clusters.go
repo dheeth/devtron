@@ -1,5 +1,5 @@
 //
-// Copyright 2021, Matej Velikonja
+// Copyright 2019, Matej Velikonja
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package gitlab
 
 import (
 	"fmt"
-	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -37,7 +37,6 @@ type ProjectClustersService struct {
 type ProjectCluster struct {
 	ID                 int                 `json:"id"`
 	Name               string              `json:"name"`
-	Domain             string              `json:"domain"`
 	CreatedAt          *time.Time          `json:"created_at"`
 	ProviderType       string              `json:"provider_type"`
 	PlatformType       string              `json:"platform_type"`
@@ -45,7 +44,6 @@ type ProjectCluster struct {
 	ClusterType        string              `json:"cluster_type"`
 	User               *User               `json:"user"`
 	PlatformKubernetes *PlatformKubernetes `json:"platform_kubernetes"`
-	ManagementProject  *ManagementProject  `json:"management_project"`
 	Project            *Project            `json:"project"`
 }
 
@@ -62,29 +60,18 @@ type PlatformKubernetes struct {
 	AuthorizationType string `json:"authorization_type"`
 }
 
-// ManagementProject represents a GitLab Project Cluster management_project.
-type ManagementProject struct {
-	ID                int        `json:"id"`
-	Description       string     `json:"description"`
-	Name              string     `json:"name"`
-	NameWithNamespace string     `json:"name_with_namespace"`
-	Path              string     `json:"path"`
-	PathWithNamespace string     `json:"path_with_namespace"`
-	CreatedAt         *time.Time `json:"created_at"`
-}
-
 // ListClusters gets a list of all clusters in a project.
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/project_clusters.html#list-project-clusters
-func (s *ProjectClustersService) ListClusters(pid interface{}, options ...RequestOptionFunc) ([]*ProjectCluster, *Response, error) {
+func (s *ProjectClustersService) ListClusters(pid interface{}, options ...OptionFunc) ([]*ProjectCluster, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, nil, err
 	}
-	u := fmt.Sprintf("projects/%s/clusters", PathEscape(project))
+	u := fmt.Sprintf("projects/%s/clusters", url.QueryEscape(project))
 
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
+	req, err := s.client.NewRequest("GET", u, nil, options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,14 +89,14 @@ func (s *ProjectClustersService) ListClusters(pid interface{}, options ...Reques
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/project_clusters.html#get-a-single-project-cluster
-func (s *ProjectClustersService) GetCluster(pid interface{}, cluster int, options ...RequestOptionFunc) (*ProjectCluster, *Response, error) {
+func (s *ProjectClustersService) GetCluster(pid interface{}, cluster int, options ...OptionFunc) (*ProjectCluster, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, nil, err
 	}
-	u := fmt.Sprintf("projects/%s/clusters/%d", PathEscape(project), cluster)
+	u := fmt.Sprintf("projects/%s/clusters/%d", url.QueryEscape(project), cluster)
 
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
+	req, err := s.client.NewRequest("GET", u, nil, options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -128,13 +115,10 @@ func (s *ProjectClustersService) GetCluster(pid interface{}, cluster int, option
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/project_clusters.html#add-existing-cluster-to-project
 type AddClusterOptions struct {
-	Name                *string                       `url:"name,omitempty" json:"name,omitempty"`
-	Domain              *string                       `url:"domain,omitempty" json:"domain,omitempty"`
-	Enabled             *bool                         `url:"enabled,omitempty" json:"enabled,omitempty"`
-	Managed             *bool                         `url:"managed,omitempty" json:"managed,omitempty"`
-	EnvironmentScope    *string                       `url:"environment_scope,omitempty" json:"environment_scope,omitempty"`
-	PlatformKubernetes  *AddPlatformKubernetesOptions `url:"platform_kubernetes_attributes,omitempty" json:"platform_kubernetes_attributes,omitempty"`
-	ManagementProjectID *string                       `url:"management_project_id,omitempty" json:"management_project_id,omitempty"`
+	Name               *string                       `url:"name,omitempty" json:"name,omitempty"`
+	Enabled            *bool                         `url:"enabled,omitempty" json:"enabled,omitempty"`
+	EnvironmentScope   *string                       `url:"environment_scope,omitempty" json:"environment_scope,omitempty"`
+	PlatformKubernetes *AddPlatformKubernetesOptions `url:"platform_kubernetes_attributes,omitempty" json:"platform_kubernetes_attributes,omitempty"`
 }
 
 // AddPlatformKubernetesOptions represents the available PlatformKubernetes options for adding.
@@ -150,14 +134,14 @@ type AddPlatformKubernetesOptions struct {
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/project_clusters.html#add-existing-cluster-to-project
-func (s *ProjectClustersService) AddCluster(pid interface{}, opt *AddClusterOptions, options ...RequestOptionFunc) (*ProjectCluster, *Response, error) {
+func (s *ProjectClustersService) AddCluster(pid interface{}, opt *AddClusterOptions, options ...OptionFunc) (*ProjectCluster, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, nil, err
 	}
-	u := fmt.Sprintf("projects/%s/clusters/user", PathEscape(project))
+	u := fmt.Sprintf("projects/%s/clusters/user", url.QueryEscape(project))
 
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
+	req, err := s.client.NewRequest("POST", u, opt, options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -176,11 +160,9 @@ func (s *ProjectClustersService) AddCluster(pid interface{}, opt *AddClusterOpti
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/project_clusters.html#edit-project-cluster
 type EditClusterOptions struct {
-	Name                *string                        `url:"name,omitempty" json:"name,omitempty"`
-	Domain              *string                        `url:"domain,omitempty" json:"domain,omitempty"`
-	EnvironmentScope    *string                        `url:"environment_scope,omitempty" json:"environment_scope,omitempty"`
-	ManagementProjectID *string                        `url:"management_project_id,omitempty" json:"management_project_id,omitempty"`
-	PlatformKubernetes  *EditPlatformKubernetesOptions `url:"platform_kubernetes_attributes,omitempty" json:"platform_kubernetes_attributes,omitempty"`
+	Name               *string                        `url:"name,omitempty" json:"name,omitempty"`
+	EnvironmentScope   *string                        `url:"environment_scope,omitempty" json:"environment_scope,omitempty"`
+	PlatformKubernetes *EditPlatformKubernetesOptions `url:"platform_kubernetes_attributes,omitempty" json:"platform_kubernetes_attributes,omitempty"`
 }
 
 // EditPlatformKubernetesOptions represents the available PlatformKubernetes options for editing.
@@ -195,14 +177,14 @@ type EditPlatformKubernetesOptions struct {
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/project_clusters.html#edit-project-cluster
-func (s *ProjectClustersService) EditCluster(pid interface{}, cluster int, opt *EditClusterOptions, options ...RequestOptionFunc) (*ProjectCluster, *Response, error) {
+func (s *ProjectClustersService) EditCluster(pid interface{}, cluster int, opt *EditClusterOptions, options ...OptionFunc) (*ProjectCluster, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, nil, err
 	}
-	u := fmt.Sprintf("projects/%s/clusters/%d", PathEscape(project), cluster)
+	u := fmt.Sprintf("projects/%s/clusters/%d", url.QueryEscape(project), cluster)
 
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
+	req, err := s.client.NewRequest("PUT", u, opt, options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -220,14 +202,14 @@ func (s *ProjectClustersService) EditCluster(pid interface{}, cluster int, opt *
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/project_clusters.html#delete-project-cluster
-func (s *ProjectClustersService) DeleteCluster(pid interface{}, cluster int, options ...RequestOptionFunc) (*Response, error) {
+func (s *ProjectClustersService) DeleteCluster(pid interface{}, cluster int, options ...OptionFunc) (*Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, err
 	}
-	u := fmt.Sprintf("projects/%s/clusters/%d", PathEscape(project), cluster)
+	u := fmt.Sprintf("projects/%s/clusters/%d", url.QueryEscape(project), cluster)
 
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
+	req, err := s.client.NewRequest("DELETE", u, nil, options)
 	if err != nil {
 		return nil, err
 	}

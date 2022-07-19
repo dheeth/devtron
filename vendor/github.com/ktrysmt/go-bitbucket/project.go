@@ -2,7 +2,9 @@ package bitbucket
 
 import (
 	"encoding/json"
+	"os"
 
+	"github.com/k0kubun/pp"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -36,10 +38,7 @@ func (t *Workspace) GetProject(opt *ProjectOptions) (*Project, error) {
 }
 
 func (t *Workspace) CreateProject(opt *ProjectOptions) (*Project, error) {
-	data, err := t.buildProjectBody(opt)
-	if err != nil {
-		return nil, err
-	}
+	data := t.buildProjectBody(opt)
 	urlStr := t.c.requestUrl("/workspaces/%s/projects", opt.Owner)
 	response, err := t.c.execute("POST", urlStr, data)
 	if err != nil {
@@ -55,10 +54,7 @@ func (t *Workspace) DeleteProject(opt *ProjectOptions) (interface{}, error) {
 }
 
 func (t *Workspace) UpdateProject(opt *ProjectOptions) (*Project, error) {
-	data, err := t.buildProjectBody(opt)
-	if err != nil {
-		return nil, err
-	}
+	data := t.buildProjectBody(opt)
 	urlStr := t.c.requestUrl("/workspaces/%s/projects/%s", opt.Owner, opt.Key)
 	response, err := t.c.execute("PUT", urlStr, data)
 	if err != nil {
@@ -68,16 +64,17 @@ func (t *Workspace) UpdateProject(opt *ProjectOptions) (*Project, error) {
 	return decodeProject(response)
 }
 
-func (t *Workspace) buildJsonBody(body map[string]interface{}) (string, error) {
+func (t *Workspace) buildJsonBody(body map[string]interface{}) string {
 	data, err := json.Marshal(body)
 	if err != nil {
-		return "", err
+		pp.Println(err)
+		os.Exit(9)
 	}
 
-	return string(data), nil
+	return string(data)
 }
 
-func (t *Workspace) buildProjectBody(opts *ProjectOptions) (string, error) {
+func (t *Workspace) buildProjectBody(opts *ProjectOptions) string {
 	body := map[string]interface{}{}
 
 	if opts.Description != "" {

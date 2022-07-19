@@ -202,18 +202,10 @@ func (n *lazyNode) equal(o *lazyNode) bool {
 			return false
 		}
 
-		if len(n.doc) != len(o.doc) {
-			return false
-		}
-
 		for k, v := range n.doc {
 			ov, ok := o.doc[k]
 
 			if !ok {
-				return false
-			}
-
-			if (v == nil) != (ov == nil) {
 				return false
 			}
 
@@ -412,17 +404,6 @@ func (d *partialArray) set(key string, val *lazyNode) error {
 	if err != nil {
 		return err
 	}
-
-	if idx < 0 {
-		if !SupportNegativeIndices {
-			return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
-		}
-		if idx < -len(*d) {
-			return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
-		}
-		idx += len(*d)
-	}
-
 	(*d)[idx] = val
 	return nil
 }
@@ -448,14 +429,14 @@ func (d *partialArray) add(key string, val *lazyNode) error {
 		return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
 	}
 
-	if idx < 0 {
-		if !SupportNegativeIndices {
-			return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
-		}
+	if SupportNegativeIndices {
 		if idx < -len(ary) {
 			return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
 		}
-		idx += len(ary)
+
+		if idx < 0 {
+			idx += len(ary)
+		}
 	}
 
 	copy(ary[0:idx], cur[0:idx])
@@ -471,16 +452,6 @@ func (d *partialArray) get(key string) (*lazyNode, error) {
 
 	if err != nil {
 		return nil, err
-	}
-
-	if idx < 0 {
-		if !SupportNegativeIndices {
-			return nil, errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
-		}
-		if idx < -len(*d) {
-			return nil, errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
-		}
-		idx += len(*d)
 	}
 
 	if idx >= len(*d) {
@@ -502,14 +473,14 @@ func (d *partialArray) remove(key string) error {
 		return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
 	}
 
-	if idx < 0 {
-		if !SupportNegativeIndices {
-			return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
-		}
+	if SupportNegativeIndices {
 		if idx < -len(cur) {
 			return errors.Wrapf(ErrInvalidIndex, "Unable to access invalid index: %d", idx)
 		}
-		idx += len(cur)
+
+		if idx < 0 {
+			idx += len(cur)
+		}
 	}
 
 	ary := make([]*lazyNode, len(cur)-1)
@@ -742,10 +713,6 @@ func (p Patch) Apply(doc []byte) ([]byte, error) {
 // ApplyIndent mutates a JSON document according to the patch, and returns the new
 // document indented.
 func (p Patch) ApplyIndent(doc []byte, indent string) ([]byte, error) {
-	if len(doc) == 0 {
-		return doc, nil
-	}
-
 	var pd container
 	if doc[0] == '[' {
 		pd = &partialArray{}

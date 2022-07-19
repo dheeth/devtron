@@ -35,7 +35,6 @@ import (
 	"github.com/devtron-labs/devtron/api/sso"
 	"github.com/devtron-labs/devtron/api/team"
 	"github.com/devtron-labs/devtron/api/user"
-	webhookHelm "github.com/devtron-labs/devtron/api/webhook/helm"
 	"github.com/devtron-labs/devtron/client/cron"
 	"github.com/devtron-labs/devtron/client/dashboard"
 	pubsub2 "github.com/devtron-labs/devtron/client/pubsub"
@@ -106,12 +105,11 @@ type MuxRouter struct {
 	commonDeploymentRouter             appStoreDeployment.CommonDeploymentRouter
 	globalPluginRouter                 GlobalPluginRouter
 	externalLinkRouter                 externalLink.ExternalLinkRouter
+	selfRegistrationRolesRouter        user.SelfRegistrationRolesRouter
 	moduleRouter                       module.ModuleRouter
 	serverRouter                       server.ServerRouter
 	apiTokenRouter                     apiToken.ApiTokenRouter
 	helmApplicationStatusUpdateHandler cron.HelmApplicationStatusUpdateHandler
-	k8sCapacityRouter                  k8s.K8sCapacityRouter
-	webhookHelmRouter                  webhookHelm.WebhookHelmRouter
 }
 
 func NewMuxRouter(logger *zap.SugaredLogger, HelmRouter HelmRouter, PipelineConfigRouter PipelineConfigRouter,
@@ -135,9 +133,9 @@ func NewMuxRouter(logger *zap.SugaredLogger, HelmRouter HelmRouter, PipelineConf
 	coreAppRouter CoreAppRouter, helmAppRouter client.HelmAppRouter, k8sApplicationRouter k8s.K8sApplicationRouter,
 	pProfRouter PProfRouter, deploymentConfigRouter deployment.DeploymentConfigRouter, dashboardTelemetryRouter dashboardEvent.DashboardTelemetryRouter,
 	commonDeploymentRouter appStoreDeployment.CommonDeploymentRouter, externalLinkRouter externalLink.ExternalLinkRouter,
-	globalPluginRouter GlobalPluginRouter, moduleRouter module.ModuleRouter,
+	globalPluginRouter GlobalPluginRouter, selfRegistrationRolesRouter user.SelfRegistrationRolesRouter, moduleRouter module.ModuleRouter,
 	serverRouter server.ServerRouter, apiTokenRouter apiToken.ApiTokenRouter,
-	helmApplicationStatusUpdateHandler cron.HelmApplicationStatusUpdateHandler, k8sCapacityRouter k8s.K8sCapacityRouter, webhookHelmRouter webhookHelm.WebhookHelmRouter) *MuxRouter {
+	helmApplicationStatusUpdateHandler cron.HelmApplicationStatusUpdateHandler) *MuxRouter {
 	r := &MuxRouter{
 		Router:                             mux.NewRouter(),
 		HelmRouter:                         HelmRouter,
@@ -195,12 +193,11 @@ func NewMuxRouter(logger *zap.SugaredLogger, HelmRouter HelmRouter, PipelineConf
 		commonDeploymentRouter:             commonDeploymentRouter,
 		externalLinkRouter:                 externalLinkRouter,
 		globalPluginRouter:                 globalPluginRouter,
+		selfRegistrationRolesRouter:        selfRegistrationRolesRouter,
 		moduleRouter:                       moduleRouter,
 		serverRouter:                       serverRouter,
 		apiTokenRouter:                     apiTokenRouter,
 		helmApplicationStatusUpdateHandler: helmApplicationStatusUpdateHandler,
-		k8sCapacityRouter:                  k8sCapacityRouter,
-		webhookHelmRouter:                  webhookHelmRouter,
 	}
 	return r
 }
@@ -377,6 +374,9 @@ func (r MuxRouter) Init() {
 	externalLinkRouter := r.Router.PathPrefix("/orchestrator/external-links").Subrouter()
 	r.externalLinkRouter.InitExternalLinkRouter(externalLinkRouter)
 
+	selfRegistrationRolesRouter := r.Router.PathPrefix("/orchestrator/self-register").Subrouter()
+	r.selfRegistrationRolesRouter.InitSelfRegistrationRolesRouter(selfRegistrationRolesRouter)
+
 	// module router
 	moduleRouter := r.Router.PathPrefix("/orchestrator/module").Subrouter()
 	r.moduleRouter.Init(moduleRouter)
@@ -388,11 +388,4 @@ func (r MuxRouter) Init() {
 	// api-token router
 	apiTokenRouter := r.Router.PathPrefix("/orchestrator/api-token").Subrouter()
 	r.apiTokenRouter.InitApiTokenRouter(apiTokenRouter)
-
-	k8sCapacityApp := r.Router.PathPrefix("/orchestrator/k8s/capacity").Subrouter()
-	r.k8sCapacityRouter.InitK8sCapacityRouter(k8sCapacityApp)
-
-	// webhook helm app router
-	webhookHelmRouter := r.Router.PathPrefix("/orchestrator/webhook/helm").Subrouter()
-	r.webhookHelmRouter.InitWebhookHelmRouter(webhookHelmRouter)
 }

@@ -18,15 +18,13 @@
 package pipeline
 
 import (
-	"context"
 	"encoding/json"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
 
-	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
-	"github.com/argoproj/argo-workflows/v3/pkg/client/clientset/versioned"
-	v1alpha12 "github.com/argoproj/argo-workflows/v3/pkg/client/clientset/versioned/typed/workflow/v1alpha1"
-	"github.com/argoproj/argo-workflows/v3/workflow/util"
+	"github.com/argoproj/argo/pkg/apis/workflow/v1alpha1"
+	"github.com/argoproj/argo/pkg/client/clientset/versioned"
+	v1alpha12 "github.com/argoproj/argo/pkg/client/clientset/versioned/typed/workflow/v1alpha1"
+	"github.com/argoproj/argo/workflow/util"
 	"github.com/devtron-labs/devtron/internal/sql/repository"
 	"github.com/devtron-labs/devtron/internal/sql/repository/pipelineConfig"
 	"github.com/devtron-labs/devtron/pkg/bean"
@@ -221,10 +219,8 @@ func (impl *WorkflowServiceImpl) SubmitWorkflow(workflowRequest *WorkflowRequest
 				ServiceAccountName: impl.ciConfig.WorkflowServiceAccount,
 				//NodeSelector:            map[string]string{impl.ciConfig.TaintKey: impl.ciConfig.TaintValue},
 				//Tolerations:             []v12.Toleration{{Key: impl.ciConfig.TaintKey, Value: impl.ciConfig.TaintValue, Operator: v12.TolerationOpEqual, Effect: v12.TaintEffectNoSchedule}},
-				Entrypoint: "ci",
-				TTLStrategy: &v1alpha1.TTLStrategy{
-					SecondsAfterCompletion: &ttl,
-				},
+				Entrypoint:              "ci",
+				TTLSecondsAfterFinished: &ttl,
 				Templates: []v1alpha1.Template{
 					{
 						Name: "ci",
@@ -251,9 +247,7 @@ func (impl *WorkflowServiceImpl) SubmitWorkflow(workflowRequest *WorkflowRequest
 								ContainerPort: 9102,
 							}},
 						},
-						ActiveDeadlineSeconds: &intstr.IntOrString{
-							IntVal: int32(workflowRequest.ActiveDeadlineSeconds),
-						},
+						ActiveDeadlineSeconds: &workflowRequest.ActiveDeadlineSeconds,
 						ArchiveLocation: &v1alpha1.ArtifactLocation{
 							ArchiveLogs: &archiveLogs,
 						},
@@ -274,7 +268,7 @@ func (impl *WorkflowServiceImpl) SubmitWorkflow(workflowRequest *WorkflowRequest
 	}
 	impl.Logger.Debug("---->", string(wfTemplate))
 
-	createdWf, err := wfClient.Create(context.Background(), &ciWorkflow, v1.CreateOptions{}) // submit the hello world workflow
+	createdWf, err := wfClient.Create(&ciWorkflow) // submit the hello world workflow
 	impl.Logger.Debug("workflow submitted: " + createdWf.Name)
 	impl.checkErr(err)
 	return createdWf, err
@@ -297,7 +291,7 @@ func (impl *WorkflowServiceImpl) GetWorkflow(name string, namespace string) (*v1
 		impl.Logger.Errorw("cannot build wf client", "err", err)
 		return nil, err
 	}
-	workflow, err := wfClient.Get(context.Background(), name, v1.GetOptions{})
+	workflow, err := wfClient.Get(name, v1.GetOptions{})
 	return workflow, err
 }
 
@@ -308,7 +302,7 @@ func (impl *WorkflowServiceImpl) TerminateWorkflow(name string, namespace string
 		impl.Logger.Errorw("cannot build wf client", "err", err)
 		return err
 	}
-	err = util.TerminateWorkflow(context.Background(), wfClient, name)
+	err = util.TerminateWorkflow(wfClient, name)
 	return err
 }
 
@@ -319,7 +313,7 @@ func (impl *WorkflowServiceImpl) UpdateWorkflow(wf *v1alpha1.Workflow) (*v1alpha
 		impl.Logger.Errorw("cannot build wf client", "err", err)
 		return nil, err
 	}
-	updatedWf, err := wfClient.Update(context.Background(), wf, v1.UpdateOptions{})
+	updatedWf, err := wfClient.Update(wf)
 	if err != nil {
 		impl.Logger.Errorw("cannot update wf ", "err", err)
 		return nil, err
@@ -335,7 +329,7 @@ func (impl *WorkflowServiceImpl) ListAllWorkflows(namespace string) (*v1alpha1.W
 		impl.Logger.Errorw("cannot build wf client", "err", err)
 		return nil, err
 	}
-	workflowList, err := wfClient.List(context.Background(), v1.ListOptions{})
+	workflowList, err := wfClient.List(v1.ListOptions{})
 	return workflowList, err
 }
 
@@ -346,7 +340,7 @@ func (impl *WorkflowServiceImpl) DeleteWorkflow(wfName string, namespace string)
 		impl.Logger.Errorw("cannot build wf client", "err", err)
 		return err
 	}
-	err = wfClient.Delete(context.Background(), wfName, v1.DeleteOptions{})
+	err = wfClient.Delete(wfName, &v1.DeleteOptions{})
 	return err
 }
 

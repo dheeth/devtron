@@ -69,10 +69,10 @@ func Extract(ctx context.Context) Tags {
 	return t
 }
 
-func SetInContext(ctx context.Context, tags Tags) context.Context {
+func setInContext(ctx context.Context, tags Tags) context.Context {
 	return context.WithValue(ctx, ctxMarkerKey, tags)
 }
 
-func NewTags() Tags {
+func newTags() Tags {
 	return &mapTags{values: make(map[string]interface{})}
 }

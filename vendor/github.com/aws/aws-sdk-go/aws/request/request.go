@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -37,10 +36,6 @@ const (
 	// API request that was canceled. Requests given a aws.Context may
 	// return this error when canceled.
 	CanceledErrorCode = "RequestCanceled"
-
-	// ErrCodeRequestError is an error preventing the SDK from continuing to
-	// process the request.
-	ErrCodeRequestError = "RequestError"
 )
 
 // A Request is the service request to be made.
@@ -56,7 +51,6 @@ type Request struct {
 	HTTPRequest            *http.Request
 	HTTPResponse           *http.Response
 	Body                   io.ReadSeeker
-	streamingBody          io.ReadCloser
 	BodyStart              int64 // offset from beginning of Body that the request body starts
 	Params                 interface{}
 	Error                  error
@@ -105,22 +99,14 @@ type Operation struct {
 	BeforePresignFn func(r *Request) error
 }
 
-// New returns a new Request pointer for the service API operation and
-// parameters.
-//
-// A Retryer should be provided to direct how the request is retried. If
-// Retryer is nil, a default no retry value will be used. You can use
-// NoOpRetryer in the Client package to disable retry behavior directly.
+// New returns a new Request pointer for the service API
+// operation and parameters.
 //
 // Params is any value of input parameters to be the request payload.
 // Data is pointer value to an object which the request's response
 // payload will be deserialized to.
 func New(cfg aws.Config, clientInfo metadata.ClientInfo, handlers Handlers,
 	retryer Retryer, operation *Operation, params interface{}, data interface{}) *Request {
-
-	if retryer == nil {
-		retryer = noOpRetryer{}
-	}
 
 	method := operation.HTTPMethod
 	if method == "" {
@@ -130,26 +116,13 @@ func New(cfg aws.Config, clientInfo metadata.ClientInfo, handlers Handlers,
 	httpReq, _ := http.NewRequest(method, "", nil)
 
 	var err error
-	httpReq.URL, err = url.Parse(clientInfo.Endpoint)
+	httpReq.URL, err = url.Parse(clientInfo.Endpoint + operation.HTTPPath)
 	if err != nil {
 		httpReq.URL = &url.URL{}
 		err = awserr.New("InvalidEndpointURL", "invalid endpoint uri", err)
 	}
 
-	if len(operation.HTTPPath) != 0 {
-		opHTTPPath := operation.HTTPPath
-		var opQueryString string
-		if idx := strings.Index(opHTTPPath, "?"); idx >= 0 {
-			opQueryString = opHTTPPath[idx+1:]
-			opHTTPPath = opHTTPPath[:idx]
-		}
-
-		if strings.HasSuffix(httpReq.URL.Path, "/") && strings.HasPrefix(opHTTPPath, "/") {
-			opHTTPPath = opHTTPPath[1:]
-		}
-		httpReq.URL.Path += opHTTPPath
-		httpReq.URL.RawQuery = opQueryString
-	}
+	SanitizeHostForHeader(httpReq)
 
 	r := &Request{
 		Config:     cfg,
@@ -314,13 +287,6 @@ func (r *Request) SetReaderBody(reader io.ReadSeeker) {
 	r.ResetBody()
 }
 
-// SetStreamingBody set the reader to be used for the request that will stream
-// bytes to the server. Request's Body must not be set to any reader.
-func (r *Request) SetStreamingBody(reader io.ReadCloser) {
-	r.streamingBody = reader
-	r.SetReaderBody(aws.ReadSeekCloser(reader))
-}
-
 // Presign returns the request's signed URL. Error will be returned
 // if the signing fails. The expire parameter is only used for presigned Amazon
 // S3 API requests. All other AWS services will use a fixed expiration
@@ -440,17 +406,11 @@ func (r *Request) Sign() error {
 		return r.Error
 	}
 
-	SanitizeHostForHeader(r.HTTPRequest)
-
 	r.Handlers.Sign.Run(r)
 	return r.Error
 }
 
 func (r *Request) getNextRequestBody() (body io.ReadCloser, err error) {
-	if r.streamingBody != nil {
-		return r.streamingBody, nil
-	}
-
 	if r.safeBody != nil {
 		r.safeBody.Close()
 	}
@@ -526,14 +486,6 @@ func (r *Request) GetBody() io.ReadSeeker {
 // Send will not close the request.Request's body.
 func (r *Request) Send() error {
 	defer func() {
-		// Ensure a non-nil HTTPResponse parameter is set to ensure handlers
-		// checking for HTTPResponse values, don't fail.
-		if r.HTTPResponse == nil {
-			r.HTTPResponse = &http.Response{
-				Header: http.Header{},
-				Body:   ioutil.NopCloser(&bytes.Buffer{}),
-			}
-		}
 		// Regardless of success or failure of the request trigger the Complete
 		// request handlers.
 		r.Handlers.Complete.Run(r)
@@ -661,10 +613,6 @@ func SanitizeHostForHeader(r *http.Request) {
 func getHost(r *http.Request) string {
 	if r.Host != "" {
 		return r.Host
-	}
-
-	if r.URL == nil {
-		return ""
 	}
 
 	return r.URL.Host

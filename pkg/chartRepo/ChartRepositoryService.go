@@ -45,7 +45,6 @@ type ChartRepositoryService interface {
 	CreateChartRepo(request *ChartRepoDto) (*chartRepoRepository.ChartRepo, error)
 	UpdateChartRepo(request *ChartRepoDto) (*chartRepoRepository.ChartRepo, error)
 	GetChartRepoById(id int) (*ChartRepoDto, error)
-	GetChartRepoByName(name string) (*ChartRepoDto, error)
 	GetChartRepoList() ([]*ChartRepoDto, error)
 	ValidateChartRepo(request *ChartRepoDto) *DetailedErrorHelmRepoValidation
 	ValidateAndCreateChartRepo(request *ChartRepoDto) (*chartRepoRepository.ChartRepo, error, *DetailedErrorHelmRepoValidation)
@@ -221,25 +220,11 @@ func (impl *ChartRepositoryServiceImpl) UpdateChartRepo(request *ChartRepoDto) (
 }
 
 func (impl *ChartRepositoryServiceImpl) GetChartRepoById(id int) (*ChartRepoDto, error) {
+	chartRepo := &ChartRepoDto{}
 	model, err := impl.repoRepository.FindById(id)
 	if err != nil && !util.IsErrNoRows(err) {
 		return nil, err
 	}
-	chartRepo := impl.convertFromDbResponse(model)
-	return chartRepo, nil
-}
-
-func (impl *ChartRepositoryServiceImpl) GetChartRepoByName(name string) (*ChartRepoDto, error) {
-	model, err := impl.repoRepository.FindByName(name)
-	if err != nil && !util.IsErrNoRows(err) {
-		return nil, err
-	}
-	chartRepo := impl.convertFromDbResponse(model)
-	return chartRepo, nil
-}
-
-func (impl *ChartRepositoryServiceImpl) convertFromDbResponse(model *chartRepoRepository.ChartRepo) *ChartRepoDto {
-	chartRepo := &ChartRepoDto{}
 	chartRepo.Id = model.Id
 	chartRepo.Name = model.Name
 	chartRepo.Url = model.Url
@@ -250,7 +235,7 @@ func (impl *ChartRepositoryServiceImpl) convertFromDbResponse(model *chartRepoRe
 	chartRepo.AccessToken = model.AccessToken
 	chartRepo.Default = model.Default
 	chartRepo.Active = model.Active
-	return chartRepo
+	return chartRepo, nil
 }
 
 func (impl *ChartRepositoryServiceImpl) GetChartRepoList() ([]*ChartRepoDto, error) {

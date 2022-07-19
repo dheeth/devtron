@@ -8,6 +8,9 @@ reviewers:
 - deads2k
 - brendandburns
 - liggitt
+- nikhiljindal
+- gmarek
+- erictune
 - sttts
 - luxas
 - dims
@@ -17,6 +20,7 @@ reviewers:
 - resouer
 - cjcullen
 - rmmh
+- lixiaobing10051267
 - asalkeld
 - juanvallejo
 - lojies

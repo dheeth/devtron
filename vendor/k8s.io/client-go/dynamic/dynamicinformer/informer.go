@@ -17,7 +17,6 @@ limitations under the License.
 package dynamicinformer
 
 import (
-	"context"
 	"sync"
 	"time"
 
@@ -43,7 +42,7 @@ func NewFilteredDynamicSharedInformerFactory(client dynamic.Interface, defaultRe
 	return &dynamicSharedInformerFactory{
 		client:           client,
 		defaultResync:    defaultResync,
-		namespace:        namespace,
+		namespace:        metav1.NamespaceAll,
 		informers:        map[schema.GroupVersionResource]informers.GenericInformer{},
 		startedInformers: make(map[schema.GroupVersionResource]bool),
 		tweakListOptions: tweakListOptions,
@@ -126,13 +125,13 @@ func NewFilteredDynamicInformer(client dynamic.Interface, gvr schema.GroupVersio
 					if tweakListOptions != nil {
 						tweakListOptions(&options)
 					}
-					return client.Resource(gvr).Namespace(namespace).List(context.TODO(), options)
+					return client.Resource(gvr).Namespace(namespace).List(options)
 				},
 				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 					if tweakListOptions != nil {
 						tweakListOptions(&options)
 					}
-					return client.Resource(gvr).Namespace(namespace).Watch(context.TODO(), options)
+					return client.Resource(gvr).Namespace(namespace).Watch(options)
 				},
 			},
 			&unstructured.Unstructured{},

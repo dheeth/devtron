@@ -15,10 +15,8 @@ import (
 	"github.com/argoproj/pkg/rand"
 )
 
-var (
-	ErrWaitPIDTimeout = fmt.Errorf("Timed out waiting for PID to complete")
-	Unredacted        = Redact(nil)
-)
+var ErrWaitPIDTimeout = fmt.Errorf("Timed out waiting for PID to complete")
+var Unredacted = Redact(nil)
 
 type CmdError struct {
 	Args   string
@@ -64,11 +62,8 @@ func Redact(items []string) func(text string) string {
 // RunCommandExt is a convenience function to run/log a command and return/log stderr in an error upon
 // failure.
 func RunCommandExt(cmd *exec.Cmd, opts CmdOpts) (string, error) {
-	execId, err := rand.RandString(5)
-	if err != nil {
-		return "", err
-	}
-	logCtx := log.WithFields(log.Fields{"execID": execId})
+
+	logCtx := log.WithFields(log.Fields{"execID": rand.RandString(5)})
 
 	redactor := DefaultCmdOpts.Redactor
 	if opts.Redactor != nil {
@@ -85,7 +80,7 @@ func RunCommandExt(cmd *exec.Cmd, opts CmdOpts) (string, error) {
 	cmd.Stderr = &stderr
 
 	start := time.Now()
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		return "", err
 	}
@@ -106,20 +101,20 @@ func RunCommandExt(cmd *exec.Cmd, opts CmdOpts) (string, error) {
 	}
 
 	select {
-	// noinspection ALL
+	//noinspection ALL
 	case <-timoutCh:
 		_ = cmd.Process.Kill()
 		output := stdout.String()
 		logCtx.WithFields(log.Fields{"duration": time.Since(start)}).Debug(redactor(output))
-		err = newCmdError(redactor(args), fmt.Errorf("timeout after %v", timeout), "")
-		logCtx.Error(err.Error())
+		err = newCmdError(args, fmt.Errorf("timeout after %v", timeout), "")
+		logCtx.Error(redactor(err.Error()))
 		return strings.TrimSuffix(output, "\n"), err
 	case err := <-done:
 		if err != nil {
 			output := stdout.String()
 			logCtx.WithFields(log.Fields{"duration": time.Since(start)}).Debug(redactor(output))
-			err := newCmdError(redactor(args), errors.New(redactor(err.Error())), strings.TrimSpace(redactor(stderr.String())))
-			logCtx.Error(err.Error())
+			err := newCmdError(args, err, strings.TrimSpace(stderr.String()))
+			logCtx.Error(redactor(err.Error()))
 			return strings.TrimSuffix(output, "\n"), err
 		}
 	}
@@ -146,7 +141,7 @@ func WaitPID(pid int, opts ...WaitPIDOpts) error {
 		return errors.Errorf("Platform '%s' unsupported", runtime.GOOS)
 	}
 	var timeout time.Duration
-	pollInterval := time.Second
+	var pollInterval = time.Second
 	if len(opts) > 0 {
 		if opts[0].PollInterval != 0 {
 			pollInterval = opts[0].PollInterval

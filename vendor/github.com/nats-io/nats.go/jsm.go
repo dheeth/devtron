@@ -124,7 +124,6 @@ type ExternalStream struct {
 // apiError is included in all API responses if there was an error.
 type apiError struct {
 	Code        int    `json:"code"`
-	ErrorCode   int    `json:"err_code"`
 	Description string `json:"description,omitempty"`
 }
 
@@ -189,7 +188,7 @@ func (js *js) AccountInfo(opts ...JSOpt) (*AccountInfo, error) {
 		defer cancel()
 	}
 
-	resp, err := js.apiRequestWithContext(o.ctx, js.apiSubj(apiAccountInfo), nil)
+	resp, err := js.nc.RequestWithContext(o.ctx, js.apiSubj(apiAccountInfo), nil)
 	if err != nil {
 		// todo maybe nats server should never have no responder on this subject and always respond if they know there is no js to be had
 		if err == ErrNoResponders {
@@ -252,7 +251,7 @@ func (js *js) AddConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*C
 		ccSubj = fmt.Sprintf(apiConsumerCreateT, stream)
 	}
 
-	resp, err := js.apiRequestWithContext(o.ctx, js.apiSubj(ccSubj), req)
+	resp, err := js.nc.RequestWithContext(o.ctx, js.apiSubj(ccSubj), req)
 	if err != nil {
 		if err == ErrNoResponders {
 			err = ErrJetStreamNotEnabled
@@ -265,9 +264,6 @@ func (js *js) AddConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*C
 		return nil, err
 	}
 	if info.Error != nil {
-		if info.Error.ErrorCode == 10059 {
-			return nil, ErrStreamNotFound
-		}
 		if info.Error.Code == 404 {
 			return nil, ErrConsumerNotFound
 		}
@@ -297,7 +293,7 @@ func (js *js) DeleteConsumer(stream, consumer string, opts ...JSOpt) error {
 	}
 
 	dcSubj := js.apiSubj(fmt.Sprintf(apiConsumerDeleteT, stream, consumer))
-	r, err := js.apiRequestWithContext(o.ctx, dcSubj, nil)
+	r, err := js.nc.RequestWithContext(o.ctx, dcSubj, nil)
 	if err != nil {
 		return err
 	}
@@ -380,7 +376,7 @@ func (c *consumerLister) Next() bool {
 	}
 
 	clSubj := c.js.apiSubj(fmt.Sprintf(apiConsumerListT, c.stream))
-	r, err := c.js.apiRequestWithContext(ctx, clSubj, req)
+	r, err := c.js.nc.RequestWithContext(ctx, clSubj, req)
 	if err != nil {
 		c.err = err
 		return false
@@ -477,7 +473,7 @@ func (c *consumerNamesLister) Next() bool {
 	}
 
 	clSubj := c.js.apiSubj(fmt.Sprintf(apiConsumerNamesT, c.stream))
-	r, err := c.js.apiRequestWithContext(ctx, clSubj, nil)
+	r, err := c.js.nc.RequestWithContext(ctx, clSubj, nil)
 	if err != nil {
 		c.err = err
 		return false
@@ -565,7 +561,7 @@ func (js *js) AddStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error) {
 	}
 
 	csSubj := js.apiSubj(fmt.Sprintf(apiStreamCreateT, cfg.Name))
-	r, err := js.apiRequestWithContext(o.ctx, csSubj, req)
+	r, err := js.nc.RequestWithContext(o.ctx, csSubj, req)
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +592,7 @@ func (js *js) StreamInfo(stream string, opts ...JSOpt) (*StreamInfo, error) {
 	}
 
 	csSubj := js.apiSubj(fmt.Sprintf(apiStreamInfoT, stream))
-	r, err := js.apiRequestWithContext(o.ctx, csSubj, nil)
+	r, err := js.nc.RequestWithContext(o.ctx, csSubj, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -680,7 +676,7 @@ func (js *js) UpdateStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error
 	}
 
 	usSubj := js.apiSubj(fmt.Sprintf(apiStreamUpdateT, cfg.Name))
-	r, err := js.apiRequestWithContext(o.ctx, usSubj, req)
+	r, err := js.nc.RequestWithContext(o.ctx, usSubj, req)
 	if err != nil {
 		return nil, err
 	}
@@ -715,7 +711,7 @@ func (js *js) DeleteStream(name string, opts ...JSOpt) error {
 	}
 
 	dsSubj := js.apiSubj(fmt.Sprintf(apiStreamDeleteT, name))
-	r, err := js.apiRequestWithContext(o.ctx, dsSubj, nil)
+	r, err := js.nc.RequestWithContext(o.ctx, dsSubj, nil)
 	if err != nil {
 		return err
 	}
@@ -792,7 +788,7 @@ func (js *js) getMsg(name string, mreq *apiMsgGetRequest, opts ...JSOpt) (*RawSt
 	}
 
 	dsSubj := js.apiSubj(fmt.Sprintf(apiMsgGetT, name))
-	r, err := js.apiRequestWithContext(o.ctx, dsSubj, req)
+	r, err := js.nc.RequestWithContext(o.ctx, dsSubj, req)
 	if err != nil {
 		return nil, err
 	}
@@ -857,7 +853,7 @@ func (js *js) DeleteMsg(name string, seq uint64, opts ...JSOpt) error {
 	}
 
 	dsSubj := js.apiSubj(fmt.Sprintf(apiMsgDeleteT, name))
-	r, err := js.apiRequestWithContext(o.ctx, dsSubj, req)
+	r, err := js.nc.RequestWithContext(o.ctx, dsSubj, req)
 	if err != nil {
 		return err
 	}
@@ -909,7 +905,7 @@ func (js *js) purgeStream(stream string, req *streamPurgeRequest, opts ...JSOpt)
 	}
 
 	psSubj := js.apiSubj(fmt.Sprintf(apiStreamPurgeT, stream))
-	r, err := js.apiRequestWithContext(o.ctx, psSubj, b)
+	r, err := js.nc.RequestWithContext(o.ctx, psSubj, b)
 	if err != nil {
 		return err
 	}
@@ -974,7 +970,7 @@ func (s *streamLister) Next() bool {
 	}
 
 	slSubj := s.js.apiSubj(apiStreamList)
-	r, err := s.js.apiRequestWithContext(ctx, slSubj, req)
+	r, err := s.js.nc.RequestWithContext(ctx, slSubj, req)
 	if err != nil {
 		s.err = err
 		return false
@@ -1058,7 +1054,7 @@ func (l *streamNamesLister) Next() bool {
 		defer cancel()
 	}
 
-	r, err := l.js.apiRequestWithContext(ctx, l.js.apiSubj(apiStreams), nil)
+	r, err := l.js.nc.RequestWithContext(ctx, l.js.apiSubj(apiStreams), nil)
 	if err != nil {
 		l.err = err
 		return false
@@ -1136,7 +1132,7 @@ func getJSContextOpts(defs *jsOpts, opts ...JSOpt) (*jsOpts, context.CancelFunc,
 	if o.ctx == nil && o.wait > 0 {
 		o.ctx, cancel = context.WithTimeout(context.Background(), o.wait)
 	}
-	if o.pre == _EMPTY_ {
+	if o.pre == "" {
 		o.pre = defs.pre
 	}
 

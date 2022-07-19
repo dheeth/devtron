@@ -2,7 +2,7 @@ package bitbucket
 
 import (
 	"errors"
-	"fmt"
+  "fmt"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -20,7 +20,6 @@ type Repositories struct {
 	BranchRestrictions *BranchRestrictions
 	Webhooks           *Webhooks
 	Downloads          *Downloads
-	DeployKeys         *DeployKeys
 	repositories
 }
 
@@ -45,12 +44,19 @@ func (r *Repositories) ListForAccount(ro *RepositoriesOptions) (*RepositoriesRes
 	if err != nil {
 		return nil, err
 	}
-	return decodeRepositories(repos)
+	return decodeRepositorys(repos)
 }
 
-// Deprecated: Use ListForAccount instead
 func (r *Repositories) ListForTeam(ro *RepositoriesOptions) (*RepositoriesRes, error) {
-	return r.ListForAccount(ro)
+	urlStr := r.c.requestUrl("/repositories/%s", ro.Owner)
+	if ro.Role != "" {
+		urlStr += "?role=" + ro.Role
+	}
+	repos, err := r.c.executeRaw("GET", urlStr, "")
+	if err != nil {
+		return nil, err
+	}
+	return decodeRepositorys(repos)
 }
 
 func (r *Repositories) ListPublic() (*RepositoriesRes, error) {
@@ -59,10 +65,10 @@ func (r *Repositories) ListPublic() (*RepositoriesRes, error) {
 	if err != nil {
 		return nil, err
 	}
-	return decodeRepositories(repos)
+	return decodeRepositorys(repos)
 }
 
-func decodeRepositories(reposResponse interface{}) (*RepositoriesRes, error) {
+func decodeRepositorys(reposResponse interface{}) (*RepositoriesRes, error) {
 	reposResponseMap, ok := reposResponse.(map[string]interface{})
 	if !ok {
 		return nil, errors.New("Not a valid format")

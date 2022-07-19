@@ -21,31 +21,9 @@ import (
 	"errors"
 	"net/http"
 
-	"k8s.io/client-go/pkg/apis/clientauthentication"
 	"k8s.io/client-go/plugin/pkg/client/auth/exec"
 	"k8s.io/client-go/transport"
 )
-
-// HTTPClientFor returns an http.Client that will provide the authentication
-// or transport level security defined by the provided Config. Will return the
-// default http.DefaultClient if no special case behavior is needed.
-func HTTPClientFor(config *Config) (*http.Client, error) {
-	transport, err := TransportFor(config)
-	if err != nil {
-		return nil, err
-	}
-	var httpClient *http.Client
-	if transport != http.DefaultTransport || config.Timeout > 0 {
-		httpClient = &http.Client{
-			Transport: transport,
-			Timeout:   config.Timeout,
-		}
-	} else {
-		httpClient = http.DefaultClient
-	}
-
-	return httpClient, nil
-}
 
 // TLSConfigFor returns a tls.Config that will provide the transport level security defined
 // by the provided Config. Will return nil if no transport level security is requested.
@@ -83,10 +61,9 @@ func HTTPWrappersForConfig(config *Config, rt http.RoundTripper) (http.RoundTrip
 // TransportConfig converts a client config to an appropriate transport config.
 func (c *Config) TransportConfig() (*transport.Config, error) {
 	conf := &transport.Config{
-		UserAgent:          c.UserAgent,
-		Transport:          c.Transport,
-		WrapTransport:      c.WrapTransport,
-		DisableCompression: c.DisableCompression,
+		UserAgent:     c.UserAgent,
+		Transport:     c.Transport,
+		WrapTransport: c.WrapTransport,
 		TLS: transport.TLSConfig{
 			Insecure:   c.Insecure,
 			ServerName: c.ServerName,
@@ -96,7 +73,6 @@ func (c *Config) TransportConfig() (*transport.Config, error) {
 			CertData:   c.CertData,
 			KeyFile:    c.KeyFile,
 			KeyData:    c.KeyData,
-			NextProtos: c.NextProtos,
 		},
 		Username:        c.Username,
 		Password:        c.Password,
@@ -104,12 +80,10 @@ func (c *Config) TransportConfig() (*transport.Config, error) {
 		BearerTokenFile: c.BearerTokenFile,
 		Impersonate: transport.ImpersonationConfig{
 			UserName: c.Impersonate.UserName,
-			UID:      c.Impersonate.UID,
 			Groups:   c.Impersonate.Groups,
 			Extra:    c.Impersonate.Extra,
 		},
-		Dial:  c.Dial,
-		Proxy: c.Proxy,
+		Dial: c.Dial,
 	}
 
 	if c.ExecProvider != nil && c.AuthProvider != nil {
@@ -117,15 +91,7 @@ func (c *Config) TransportConfig() (*transport.Config, error) {
 	}
 
 	if c.ExecProvider != nil {
-		var cluster *clientauthentication.Cluster
-		if c.ExecProvider.ProvideClusterInfo {
-			var err error
-			cluster, err = ConfigToExecCluster(c)
-			if err != nil {
-				return nil, err
-			}
-		}
-		provider, err := exec.GetAuthenticator(c.ExecProvider, cluster)
+		provider, err := exec.GetAuthenticator(c.ExecProvider)
 		if err != nil {
 			return nil, err
 		}
