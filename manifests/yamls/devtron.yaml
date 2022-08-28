@@ -169,6 +169,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: ACD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: argocd-initial-admin-secret
+                  optional: true
           envFrom:
           - configMapRef:
               name: devtron-cm
