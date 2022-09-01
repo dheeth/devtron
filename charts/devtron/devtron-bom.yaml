@@ -7,8 +7,8 @@ components:
   dashboard:
     image: "quay.io/devtron/test:797a2fba-3233-1667"
   devtron:
-    image: "quay.io/devtron/hyperion:18c881e4-282-10237"
-    cicdImage: "quay.io/devtron/devtron:18c881e4-313-10238"
+    image: "quay.io/devtron/hyperion:8bf88f93-282-10254"
+    cicdImage: "quay.io/devtron/devtron:8bf88f93-313-10255"
   argocdDexServer:
     image: "ghcr.io/dexidp/dex:v2.30.2"
     initContainer:
@@ -24,7 +24,7 @@ components:
     envVars:
       devtron:
         GIT_BRANCH: "gitops_acd_integration"
-        GIT_HASH: "18c881e4680e6741920b9f2d8ec31dc3adae69a7"
+        GIT_HASH: "8bf88f93eb1c0128c11dd02b7cb7ec403871af57"
       casbin:
         GIT_BRANCH: "main"
         GIT_HASH: "e9175e9845c9ca8f6260ea58ce7ad22118244eac"
