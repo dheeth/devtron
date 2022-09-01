@@ -22,7 +22,7 @@ spec:
         image: quay.io/devtron/migrator:9c933d29-149-10140
         env:
         - name: GIT_BRANCH
-          value: main
+          value: gitops_acd_integration
         - name: SCRIPT_LOCATION
           value: scripts/sql/
         - name: GIT_REPO_URL
@@ -40,7 +40,7 @@ spec:
         - name: MIGRATE_TO_VERSION
           value: "0"
         - name: GIT_HASH
-          value: 588ebc7d5408069e994b239dfba2553fc283a91f
+          value: 18c881e4680e6741920b9f2d8ec31dc3adae69a7
         envFrom:
           - secretRef:
               name: postgresql-migrator
