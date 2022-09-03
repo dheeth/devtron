@@ -5,10 +5,10 @@ installer:
   
 components:
   dashboard:
-    image: "quay.io/devtron/test:386404c7-3233-1714"
+    image: "quay.io/devtron/test:94555783-3233-1721"
   devtron:
-    image: "quay.io/devtron/hyperion:8a49e754-282-10280"
-    cicdImage: "quay.io/devtron/devtron:8a49e754-313-10281"
+    image: "quay.io/devtron/test:a5311d1a-3263-1724"
+    cicdImage: "quay.io/devtron/test:a5311d1a-3260-1723"
   argocdDexServer:
     image: "ghcr.io/dexidp/dex:v2.30.2"
     initContainer:
@@ -24,7 +24,7 @@ components:
     envVars:
       devtron:
         GIT_BRANCH: "gitops_acd_integration"
-        GIT_HASH: "8a49e754948e8a7d5e84578579fdc980fd96ff78"
+        GIT_HASH: "a5311d1a840e6641af7a58d9a350a23f3993a87d"
       casbin:
         GIT_BRANCH: "main"
         GIT_HASH: "e9175e9845c9ca8f6260ea58ce7ad22118244eac"
