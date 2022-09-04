@@ -24,7 +24,7 @@ components:
     envVars:
       devtron:
         GIT_BRANCH: "gitops_acd_integration"
-        GIT_HASH: "a5311d1a840e6641af7a58d9a350a23f3993a87d"
+        GIT_HASH: "1b797de81790a458457850cae356b72391c6d3f5"
       casbin:
         GIT_BRANCH: "main"
         GIT_HASH: "e9175e9845c9ca8f6260ea58ce7ad22118244eac"
