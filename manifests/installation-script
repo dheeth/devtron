@@ -1,5 +1,5 @@
-LTAG="v0.5.2";
-REPO_RAW_URL="https://raw.githubusercontent.com/devtron-labs/devtron/";
+LTAG="integrate-security";
+REPO_RAW_URL="https://raw.githubusercontent.com/dheeth/devtron/";
 
 operatorSecret = kubectl get secret -n devtroncd devtron-operator-secret;
 operatorConfigMap = kubectl get cm -n devtroncd devtron-operator-cm;
@@ -74,13 +74,13 @@ if !defaultCacheBucket {
 ######Generating raw urls
 ##argocd_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/argocd.yaml";
 argocdResource_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/argocd-resource.json";
-clair_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/clair.yaml";
-clairConfig_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/clairv4-config.yaml";
+##clair_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/clair.yaml";
+##clairConfig_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/clairv4-config.yaml";
 dashboard_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/dashboard.yaml";
 gitSensor_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/gitsensor.yaml";
-guard_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/guard.yaml";
+##guard_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/guard.yaml";
 postgresql_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/postgresql.yaml";
-imageScanner_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/image-scanner.yaml";
+##imageScanner_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/image-scanner.yaml";
 kubelink_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/kubelink.yaml";
 kubewatch_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/kubewatch.yaml";
 lens_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/lens.yaml";
@@ -107,13 +107,13 @@ minioStorage_raw = REPO_RAW_URL + LTAG + "/manifests/yamls/minio-storage.yaml";
 ######Downloading the manifests
 ##argocd = download(argocd_raw);
 argocdResource = download(argocdResource_raw);
-clair = download(clair_raw);
-clairConfig = download(clairConfig_raw);
+##clair = download(clair_raw);
+##clairConfig = download(clairConfig_raw);
 dashboard = download(dashboard_raw);
 gitSensor = download(gitSensor_raw);
-guard = download(guard_raw);
+##guard = download(guard_raw);
 postgresql = download(postgresql_raw);
-imageScanner = download(imageScanner_raw);
+##imageScanner = download(imageScanner_raw);
 kubelink = download(kubelink_raw);
 kubewatch = download(kubewatch_raw);
 lens = download(lens_raw);
@@ -136,13 +136,13 @@ minioStorage = download(minioStorage_raw);
 ######Downloading the manifests
 
 ##argocdOverride = kubectl get cm -n devtroncd argocd-override-cm;
-clairOverride = kubectl get cm -n devtroncd clair-override-cm;
-clairConfigOverride = kubectl get cm -n devtroncd clair-config-override-cm;
+##clairOverride = kubectl get cm -n devtroncd clair-override-cm;
+##clairConfigOverride = kubectl get cm -n devtroncd clair-config-override-cm;
 dashboardOverride = kubectl get cm -n devtroncd dashboard-override-cm;
 gitSensorOverride = kubectl get cm -n devtroncd git-sensor-override-cm;
-guardOverride = kubectl get cm -n devtroncd guard-override-cm;
+##guardOverride = kubectl get cm -n devtroncd guard-override-cm;
 postgresqlOverride = kubectl get cm -n devtroncd postgresql-override-cm;
-imageScannerOverride = kubectl get cm -n devtroncd image-scanner-override-cm;
+##imageScannerOverride = kubectl get cm -n devtroncd image-scanner-override-cm;
 kubelinkOverride = kubectl get cm -n devtroncd kubelink-override-cm;
 kubewatchOverride = kubectl get cm -n devtroncd kubewatch-override-cm;
 lensOverride = kubectl get cm -n devtroncd lens-override-cm;
@@ -164,13 +164,13 @@ minioStorageOverride = kubectl get cm -n devtroncd minio-storage-override-cm;
 
 
 ##argocdOverride = jsonSelect(argocdOverride, "data.override");
-clairOverride = jsonSelect(clairOverride, "data.override");
-clairConfigOverride = jsonSelect(clairConfigOverride, "data.override");
+##clairOverride = jsonSelect(clairOverride, "data.override");
+##clairConfigOverride = jsonSelect(clairConfigOverride, "data.override");
 dashboardOverride = jsonSelect(dashboardOverride, "data.override");
 gitSensorOverride = jsonSelect(gitSensorOverride, "data.override");
-guardOverride = jsonSelect(guardOverride, "data.override");
+##guardOverride = jsonSelect(guardOverride, "data.override");
 postgresqlOverride = jsonSelect(postgresqlOverride, "data.override");
-imageScannerOverride = jsonSelect(imageScannerOverride, "data.override");
+##imageScannerOverride = jsonSelect(imageScannerOverride, "data.override");
 kubelinkOverride = jsonSelect(kubelinkOverride, "data.override");
 kubewatchOverride = jsonSelect(kubewatchOverride, "data.override");
 lensOverride = jsonSelect(lensOverride, "data.override");
@@ -434,7 +434,7 @@ kubeYamlEdit(notifier, "data.DB_PWD", postgresqlPassword, `/Secret//notifier-sec
 #kubeYamlEdit(notifier, "data.BASE_URL", baseURLScheme + "://" + baseURL, `/ConfigMap//notifier-cm`);
 
 #image-scanner
-kubeYamlEdit(imageScanner, "data.PG_PASSWORD", postgresqlPassword, `/Secret//image-scanner-secret`);
+##kubeYamlEdit(imageScanner, "data.PG_PASSWORD", postgresqlPassword, `/Secret//image-scanner-secret`);
 
 #lens
 kubeYamlEdit(lens, "data.PG_PASSWORD", postgresqlPassword, `/Secret//lens-secret`);
@@ -483,30 +483,30 @@ if hasNatsStreaming {
 log(hasNatsStreaming);
 
 #guard
-makeCertsDir = `#!/bin/bash
-mkdir -p /tmp/certs`;
-makeCertsDir = shellScript makeCertsDir;
+##makeCertsDir = `#!/bin/bash
+##mkdir -p /tmp/certs`;
+##makeCertsDir = shellScript makeCertsDir;
 
 ######Generating raw urls
-certGen_raw = REPO_RAW_URL + LTAG + "/manifests/generate_certificate.sh";
-grumpyConfig_raw = REPO_RAW_URL + LTAG + "/manifests/grumpy_config.txt";
-caConfig_raw = REPO_RAW_URL + LTAG + "/manifests/ca_config.txt";
+##certGen_raw = REPO_RAW_URL + LTAG + "/manifests/generate_certificate.sh";
+##grumpyConfig_raw = REPO_RAW_URL + LTAG + "/manifests/grumpy_config.txt";
+##caConfig_raw = REPO_RAW_URL + LTAG + "/manifests/ca_config.txt";
 
 ######Downloading the manifests
-certGen = download(certGen_raw);
-grumpyConfig = download(grumpyConfig_raw, "/tmp/certs/grumpy_config.txt");
-caConfig = download(caConfig_raw, "/tmp/certs/ca_config.txt");
+##certGen = download(certGen_raw);
+##grumpyConfig = download(grumpyConfig_raw, "/tmp/certs/grumpy_config.txt");
+##caConfig = download(caConfig_raw, "/tmp/certs/ca_config.txt");
 
-certs = shellScript certGen;
-crt = base64EncoderPrefix + "cat /tmp/certs/grumpy-crt.pem" + base64EncoderSuffix;
-crt = shellScript crt;
-key = base64EncoderPrefix + "cat /tmp/certs/grumpy-key.pem" + base64EncoderSuffix;
-key = shellScript key;
-cacrt = base64EncoderPrefix + "cat /tmp/certs/ca.crt" + base64EncoderSuffix;
-cacrt = shellScript cacrt;
-kubeYamlEdit(guard, `data.cert\.pem`, crt, `/Secret//guard-secret`);
-kubeYamlEdit(guard, `data.key\.pem`, key, `/Secret//guard-secret`);
-kubeYamlEdit(guard, "webhooks.0.clientConfig.caBundle", cacrt, `admissionregistration.k8s.io/ValidatingWebhookConfiguration//grumpy`);
+##certs = shellScript certGen;
+##crt = base64EncoderPrefix + "cat /tmp/certs/grumpy-crt.pem" + base64EncoderSuffix;
+##crt = shellScript crt;
+##key = base64EncoderPrefix + "cat /tmp/certs/grumpy-key.pem" + base64EncoderSuffix;
+##key = shellScript key;
+##cacrt = base64EncoderPrefix + "cat /tmp/certs/ca.crt" + base64EncoderSuffix;
+##cacrt = shellScript cacrt;
+##kubeYamlEdit(guard, `data.cert\.pem`, crt, `/Secret//guard-secret`);
+##kubeYamlEdit(guard, `data.key\.pem`, key, `/Secret//guard-secret`);
+##kubeYamlEdit(guard, "webhooks.0.clientConfig.caBundle", cacrt, `admissionregistration.k8s.io/ValidatingWebhookConfiguration//grumpy`);
 
 # devtron
 hasDevtron = kubectl get deployment "devtron" -n devtroncd;
@@ -637,15 +637,15 @@ if !helmInstallation {
 
   log("executed devtron ingress setup");
 }
-guard = kubectl apply -n devtroncd guard -u guardOverride;
-log("executed guard setup");
+##guard = kubectl apply -n devtroncd guard -u guardOverride;
+##log("executed guard setup");
 if !helmInstallation {
   dashboard = kubectl apply -n devtroncd dashboard -u dashboardOverride;
   log("executed dashboard setup");
 }
 gitSensor = kubectl apply -n devtroncd gitSensor -u gitSensorOverride;
 log("executed git sensor setup");
-imageScanner = kubectl apply -n devtroncd imageScanner -u imageScannerOverride;
+##imageScanner = kubectl apply -n devtroncd imageScanner -u imageScannerOverride;
 log("executed image scanner setup");
 if !helmInstallation {
   kubelink = kubectl apply -n devtroncd kubelink -u kubelinkOverride;
@@ -782,15 +782,15 @@ executor:
 kubeYamlEdit(workflow, "data.config", workflowConfig, `/ConfigMap//workflow-controller-configmap`);
 workflow = kubectl apply -n argo workflow -u workflowOverride;
 log("executed workflow setup");
-postgresPlainPwd = base64DecoderPrefix + `echo "` + postgresqlPassword + `" | tr -d ':\n' ` + base64DecoderSuffix;
-postgresPlainPwd = shellScript postgresPlainPwd;
-clairPostgresUrl = "host=postgresql-postgresql.devtroncd port=5432 dbname=clairv4 user=postgres password="+ postgresPlainPwd +" sslmode=disable"
-log(clairPostgresUrl);
-yamlEdit(clairConfig, "indexer.connstring", clairPostgresUrl, 0);
-yamlEdit(clairConfig, "matcher.connstring", clairPostgresUrl, 0);
-yamlEdit(clairConfig, "notifier.connstring", clairPostgresUrl, 0);
-clairEncodedConfig = base64EncoderPrefix + `echo "` + clairConfig + `"` + base64EncoderSuffix;
-clairEncodedConfig = shellScript clairEncodedConfig;
-kubeYamlEdit(clair, `data.config\.yaml`, clairEncodedConfig, `/Secret//clair`);
-clair = kubectl apply -n devtroncd clair -u clairOverride;
-log("executed clair setup");
+##postgresPlainPwd = base64DecoderPrefix + `echo "` + postgresqlPassword + `" | tr -d ':\n' ` + base64DecoderSuffix;
+##postgresPlainPwd = shellScript postgresPlainPwd;
+##clairPostgresUrl = "host=postgresql-postgresql.devtroncd port=5432 dbname=clairv4 user=postgres password="+ postgresPlainPwd +" sslmode=disable"
+##log(clairPostgresUrl);
+##yamlEdit(clairConfig, "indexer.connstring", clairPostgresUrl, 0);
+##yamlEdit(clairConfig, "matcher.connstring", clairPostgresUrl, 0);
+##yamlEdit(clairConfig, "notifier.connstring", clairPostgresUrl, 0);
+##clairEncodedConfig = base64EncoderPrefix + `echo "` + clairConfig + `"` + base64EncoderSuffix;
+##clairEncodedConfig = shellScript clairEncodedConfig;
+##kubeYamlEdit(clair, `data.config\.yaml`, clairEncodedConfig, `/Secret//clair`);
+##clair = kubectl apply -n devtroncd clair -u clairOverride;
+##log("executed clair setup");
