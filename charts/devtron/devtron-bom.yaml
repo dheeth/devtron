@@ -1,14 +1,15 @@
 installer:
   release: "v0.5.3"
+  repo: "dheeth/devtron"
   image: "quay.io/devtron/inception"
   tag: "c62d4c30-185-9354"
   
 components:
   dashboard:
-    image: "quay.io/devtron/dashboard:28591c0e-240-10382"
+    image: "quay.io/devtron/test:63633010-382-10447"
   devtron:
-    image: "quay.io/devtron/test:084c1b09-3263-1895"
-    cicdImage: "quay.io/devtron/test:084c1b09-3260-1894"
+    image: "quay.io/devtron/test:5a82449e-3263-1903"
+    cicdImage: "quay.io/devtron/test:5a82449e-3260-1904"
   argocdDexServer:
     image: "ghcr.io/dexidp/dex:v2.30.2"
     initContainer:
