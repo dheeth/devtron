@@ -458,11 +458,13 @@ if hasNatsServerPod && !hasNatsServerPVC {
   log("Nats Server PVC not found");
   natsStsDelete = kubectl delete -n devtroncd sts devtron-nats;
   ignore = shellScript sleep50;
+  kubeYamlDelete(natsServer, filter=`/Deployment/devtroncd/devtron-nats-box`);
   natsServerWithPVC = kubectl apply -n devtroncd natsServer -u natsServerOverride;
   log("Nats PVC created and statefulset re-created");
 }
 else {
 ignore = shellScript sleep50;
+kubeYamlDelete(natsServer, filter=`/Deployment/devtroncd/devtron-nats-box`);
 natsServer = kubectl apply -n devtroncd natsServer -u natsServerOverride;
 }
 log(hasNatsServerPod);
