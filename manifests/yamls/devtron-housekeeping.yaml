@@ -126,7 +126,7 @@ spec:
       serviceAccountName: devtron
       containers:
       - name: devtron-housekeeping
-        image: quay.io/devtron/kubectl:latest
+        image: toolhippie/kubectl:latest
         command: ['sh', '-c', 'sh /apply-labels.sh; exit 0']
         env:
         - name: RELEASE_NAME
