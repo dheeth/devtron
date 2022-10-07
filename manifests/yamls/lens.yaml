@@ -207,7 +207,7 @@ spec:
       restartPolicy: Always
       containers:
         - name: envoy
-          image: "quay.io/devtron/envoy:v1.14.1"
+          image: "envoyproxy/envoy:v1.16.1"
           ports:
             - containerPort: 9901
               protocol: TCP
@@ -221,7 +221,7 @@ spec:
             - name: envoy-config-volume
               mountPath: /etc/envoy-config/
         - name: lens
-          image: "quay.io/devtron/lens:c20fad05-333-10142"
+          image: "quay.io/devtron/test:c20fad05-4607-2889"
           imagePullPolicy: IfNotPresent
           ports:
             - name: app
