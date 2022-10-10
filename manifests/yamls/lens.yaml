@@ -37,8 +37,6 @@ spec:
       targetPort: app
       protocol: TCP
       name: app
-    - port: 9901
-      name: envoy-admin
   selector:
     app: lens
 ---
