@@ -1,25 +1,27 @@
 installer:
+  repo: "dheeth/devtron"
   release: "v0.6.0"
-  image: "quay.io/devtron/inception"
-  tag: "c62d4c30-185-9354"
+  image: "quay.io/devtron/test"
+  tag: "0b0f58a1-4333-2629"
   
 components:
   dashboard:
-    image: "quay.io/devtron/dashboard:9c21414c-325-10743"
+    image: "quay.io/devtron/test:5f643efd-4335-2947"
   devtron:
-    image: "quay.io/devtron/hyperion:299b90b9-280-10744"
-    cicdImage: "quay.io/devtron/devtron:299b90b9-326-10742"
+    image: "quay.io/devtron/test:e55e46b4-4336-2887"
+    cicdImage: "quay.io/devtron/test:f819500e-4334-2897"
   argocdDexServer:
     image: "ghcr.io/dexidp/dex:v2.30.2"
     initContainer:
-      authenticator: "quay.io/devtron/authenticator:aecda793-381-10540"
+      authenticator: "quay.io/devtron/test:aecda793-4338-2627"
   kubelink:
-    image: "quay.io/devtron/kubelink:919924e0-318-10747"
+    image: "quay.io/devtron/test:d46a0428-4337-2888"
   postgres:
     image: "quay.io/devtron/postgres:11.9.0-debian-10-r26"
+    armImage: "postgres:11.9"
   
   migrator:
-    image: "quay.io/devtron/migrator:9c933d29-149-10140"
+    image: "quay.io/devtron/test:5d49683f-4497-3032"
     envVars:
       devtron:
         GIT_BRANCH: "main"
