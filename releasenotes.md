@@ -1,6 +1,7 @@
 ## Bugs
 ## Enhancements
 ## Documentation
+- Doc: Update install documentation with aws-ebs-csi-driver (#2517)
 - docs: External secret operator doc (#2305)
 - docs: add cluster documentation update (#2367)
 - docs: Removed kubectl for devtron configuration (#2420)
