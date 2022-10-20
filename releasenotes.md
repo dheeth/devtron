@@ -10,3 +10,4 @@
 - docs: tab name correction for cluster type (#2510)
 - docs: configure resources (#2513)
 ## Others
+- Correct error logs (#2419)
