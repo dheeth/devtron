@@ -43,6 +43,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GIT_TOKEN }}
         RELEASE_BRANCH: ${{ secrets.RELEASE_BRANCH }}
+        FILE_NAME: ${{ secrets.FILE_NAME }}
     # Send notification on discord
     - name: discord-notify
       run: |
