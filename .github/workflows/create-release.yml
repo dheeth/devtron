@@ -27,19 +27,20 @@ jobs:
       run: |
         RELEASE_FILE_CONTENTS=$(curl -L -s  "https://raw.githubusercontent.com/$REPO/$GIT_BRANCH/$RELEASE_FILE" )
         RELEASE_TYPE=$(echo $RELEASE_FILE_CONTENTS | awk '{print $1}')
+        echo $RELEASE_TYPE
         if [[ "$RELEASE_TYPE" == "stable" ]]
-        then
-        echo $GITHUB_REPOSITORY
-        gh repo clone $GITHUB_REPOSITORY
-        cd devtron
-        tag=$(git tag --sort=committerdate | tail -1)
-        echo $tag
-        echo $RELEASE_BRANCH
-        echo $GITHUB_REPOSITORY
-        gh release create $tag --target $RELEASE_BRANCH -R $GITHUB_REPOSITORY -F $FILE_NAME
+          then
+            echo $GITHUB_REPOSITORY
+            gh repo clone $GITHUB_REPOSITORY
+            cd devtron
+            tag=$(git tag --sort=committerdate | tail -1)
+            echo $tag
+            echo $RELEASE_BRANCH
+            echo $GITHUB_REPOSITORY
+            gh release create $tag --target $RELEASE_BRANCH -R $GITHUB_REPOSITORY -F $FILE_NAME
         elif [[ "$RELEASE_TYPE" == "beta" ]]
-        then
-        echo "Not creating release due to beta"
+          then
+            echo "Not creating release due to beta"
         fi
       env:
         GH_TOKEN: ${{ secrets.GIT_TOKEN }}
