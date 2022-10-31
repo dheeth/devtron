@@ -25,7 +25,7 @@ jobs:
     # Runs series of commands to create a release
     - name: create-release
       run: |
-        RELEASE_FILE_CONTENTS=$(curl -L -s  "https://raw.githubusercontent.com/$GITHUB_REPOSIIORY/$RELEASE_BRANCH/manifests/release.txt" )
+        RELEASE_FILE_CONTENTS=$(curl -L -s  "https://raw.githubusercontent.com/dheeth/devtron/release-bot/manifests/release.txt" )
         RELEASE_TYPE=$(echo $RELEASE_FILE_CONTENTS | awk '{print $1}')
         echo $RELEASE_TYPE
         if [[ "$RELEASE_TYPE" == "stable" ]]
