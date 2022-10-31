@@ -6,7 +6,7 @@ name: Create Release
 # or on push in charts directory of main branch.
 on:
   push:
-    branches: [ main ]
+    branches: [ test-release ]
 
     paths:
       - 'charts/**'
@@ -25,22 +25,31 @@ jobs:
     # Runs series of commands to create a release
     - name: create-release
       run: |
+        RELEASE_FILE_CONTENTS=$(curl -L -s  "https://raw.githubusercontent.com/$REPO/$GIT_BRANCH/$RELEASE_FILE" )
+        RELEASE_TYPE=$(echo $RELEASE_FILE_CONTENTS | awk '{print $1}')
+        if [[ "$RELEASE_TYPE" == "stable" ]]
+        then
         gh repo clone $GITHUB_REPOSITORY
         cd devtron
         tag=$(git tag --sort=committerdate | tail -1)
         echo $tag
         echo $RELEASE_BRANCH
         echo $GITHUB_REPOSITORY
-        gh release create $tag --target $RELEASE_BRANCH -R $GITHUB_REPOSITORY
-        sudo apt install nodejs npm -y
-        npm install github-release-notes -g
-        gren release --data-source issues --include-messages all --override --token ${{ secrets.GIT_TOKEN }} --tags $tag --username devtron-labs --repo devtron
+        gh release create $tag --target $RELEASE_BRANCH -R $GITHUB_REPOSITORY -F $FILE_NAME
+        elif [[ "$RELEASE_TYPE" == "beta" ]]
+        then
+        echo "Not creating release due to beta"
+        fi
       env:
         GH_TOKEN: ${{ secrets.GIT_TOKEN }}
         RELEASE_BRANCH: ${{ secrets.RELEASE_BRANCH }}
     # Send notification on discord
     - name: discord-notify
       run: |
+        RELEASE_FILE_CONTENTS=$(curl -L -s  "https://raw.githubusercontent.com/$REPO/$GIT_BRANCH/$RELEASE_FILE" )
+        RELEASE_TYPE=$(echo $RELEASE_FILE_CONTENTS | awk '{print $1}')
+        if [[ "$RELEASE_TYPE" == "stable" ]]
+        then
         sudo apt install python3 python3-pip -y
         pip install discord-webhook
         export repo=$GITHUB_REPOSITORY
@@ -48,3 +57,7 @@ jobs:
         curl -O https://raw.githubusercontent.com/pawan-59/scripts/main/python/release-note-discord.py
         ls
         python3 release-note-discord.py
+        elif [[ "$RELEASE_TYPE" == "beta" ]]
+        then
+        echo "Not sending notification due to beta"
+        fi
