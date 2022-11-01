@@ -44,6 +44,7 @@ jobs:
             git checkout release-bot # remember to add -b before getting it merged into main
             touch CHANGELOG/release-notes-${tag}.md
             cat $FILE_NAME > CHANGELOG/release-notes-${tag}.md
+            ls CHANGELOG
             git config --global user.email "$GIT_CONFIG_EMAIL"
             git config --global user.name "$GIT_CONFIG_NAME"
             rm -f $FILE_NAME
@@ -52,6 +53,7 @@ jobs:
             echo "## Enhancements" >> beta-releasenotes.md
             echo "## Documentation" >> beta-releasenotes.md
             echo "## Others" >> beta-releasenotes.md
+            git add .
             git commit -am "Updated release-notes files"
             git push -f https://${GIT_CONFIG_NAME}:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY} release-bot
         elif [[ "$RELEASE_TYPE" == "beta" ]]
