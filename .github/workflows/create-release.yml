@@ -53,6 +53,7 @@ jobs:
             echo "## Enhancements" >> beta-releasenotes.md
             echo "## Documentation" >> beta-releasenotes.md
             echo "## Others" >> beta-releasenotes.md
+            sed -i 's/stable/beta/' manifests/release.txt
             git add .
             git commit -am "Updated release-notes files"
             git push -f https://${GIT_CONFIG_NAME}:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY} release-bot
