@@ -53,7 +53,7 @@ jobs:
             echo "## Documentation" >> beta-releasenotes.md
             echo "## Others" >> beta-releasenotes.md
             git commit -am "Updated release-notes files"
-            git push -f https://$GIT_CONFIG_NAME:$GH_TOKEN@$GITHUB_REPOSITORY release-bot
+            git push -f https://${GIT_CONFIG_NAME}:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY} release-bot
         elif [[ "$RELEASE_TYPE" == "beta" ]]
           then
             echo "Not creating release due to beta"
