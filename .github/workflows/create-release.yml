@@ -44,8 +44,8 @@ jobs:
             touch CHANGELOG/release-notes-${tag}.md
             cat $FILE_NAME > CHANGELOG/release-notes-${tag}.md
             git checkout release-bot # remember to add -b before getting it merged into main
-            git config --system user.email "$GIT_CONFIG_EMAIL"
-            git config --system user.name "$GIT_CONFIG_NAME"
+            git config --global user.email "$GIT_CONFIG_EMAIL"
+            git config --global user.name "$GIT_CONFIG_NAME"
             rm -f $FILE_NAME
             touch $FILE_NAME
             echo "## Bugs" > beta-releasenotes.md
