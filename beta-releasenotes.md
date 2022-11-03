@@ -2,6 +2,7 @@
 - Fix: Updated username for Prakarsh (#2575)
 ## Enhancements
 ## Documentation
+- Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
 - Some Helm apps not visible fix (#2538)
 - hotfix for bitbucket panic  (#2553)
