@@ -1,3 +1,11 @@
+## v0.6.5-rc.2
+
+## Bugs
+## Enhancements
+## Documentation
+## Others
+
+
 ## v0.6.5-rc.1
 
 ## Bugs
