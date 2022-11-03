@@ -3,3 +3,4 @@
 ## Enhancements
 ## Documentation
 ## Others
+- chore: Updated issue and pr template (#2570)
