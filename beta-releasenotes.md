@@ -8,6 +8,7 @@
 ## Enhancements
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
+- feat: App workflow and env overrides Clone and Delete api. (#2565)
 ## Documentation
 - docs: Modified the devtron install cmd with gcp cloud (#2580)
 - Docs: Added basic GUI for rollout deployment (#2516)
