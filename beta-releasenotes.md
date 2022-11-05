@@ -13,6 +13,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- chore: Updated issue and pr template (#2570)
 - schema.json of reference charts update  (#2572)
 - Some Helm apps not visible fix (#2538)
 - hotfix for bitbucket panic  (#2553)
