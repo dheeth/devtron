@@ -5,6 +5,7 @@
 - fix: showing cicd module status as installing if devtron is installing with cicd module (#2576)
 ## Enhancements
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
+- feat: App workflow and env overrides Clone and Delete api. (#2565)
 ## Documentation
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
