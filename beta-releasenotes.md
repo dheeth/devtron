@@ -17,6 +17,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- chore: Updated issue and pr template (#2570)
 - schema.json of reference charts update  (#2572)
 - fixed migration query in 90th verison (#2586)
 - Some Helm apps not visible fix (#2538)
