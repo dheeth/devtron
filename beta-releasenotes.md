@@ -18,6 +18,7 @@
 ## Documentation
 - docs: Modified the devtron install cmd with gcp cloud (#2580)
 - docs: Modified the devtron install cmd with gcp cloud (#2580)
+- docs: Modified the devtron install cmd with gcp cloud (#2580)
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
