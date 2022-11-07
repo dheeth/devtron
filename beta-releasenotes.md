@@ -21,6 +21,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- Fix ingress new-legacy issue (#2583)
 - fixed migration query in 90th verison (#2586)
 - Some Helm apps not visible fix (#2538)
 - chore: Updated issue and pr template (#2570)
