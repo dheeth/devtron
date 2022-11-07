@@ -1,4 +1,5 @@
 ## Bugs
+- fix: updated wiring for TelemetryEventClientExtended.go (#2588)
 - fix: sql script semicolon fix (#2590)
 - Fix: Updated username for Prakarsh (#2575)
 - fix: showing cicd module status as installing if devtron is installing with cicd module (#2576)
