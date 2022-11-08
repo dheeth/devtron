@@ -23,6 +23,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- Ingress pathtype if condition update (#2592)
 - schema.json of reference charts update  (#2572)
 - Fix ingress new-legacy issue (#2583)
 - fixed migration query in 90th verison (#2586)
