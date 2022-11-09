@@ -1,4 +1,5 @@
 ## Bugs
+- fix: sql script semicolon fix (#2590)
 - fix: updated wiring for TelemetryEventClientExtended.go (#2588)
 - fix: sql script semicolon fix (#2590)
 - fix: updated wiring for TelemetryEventClientExtended.go (#2588)
