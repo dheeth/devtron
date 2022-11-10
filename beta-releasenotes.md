@@ -19,6 +19,7 @@
 ## Enhancements
 - feat: Provide description for Chart Types (#2585)
 - feat: Provide description for Chart Types (#2585)
+- feat: Provide description for Chart Types (#2585)
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
 - feat: Provide description for Chart Types (#2585)
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
