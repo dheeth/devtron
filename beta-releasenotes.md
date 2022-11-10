@@ -31,6 +31,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- merge main into ref-chart-4-15-fix (#2601)
 - chore: Release action update for new release process (#2610)
 - Fix ingress new-legacy issue (#2583)
 - Ingress pathtype if condition update (#2592)
