@@ -34,6 +34,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- chore: Created update-release-notes.yml github action (#2587)
 - Ingress pathtype if condition update (#2592)
 - Ci Build config API backward compatibilty (#2598)
 - merge main into ref-chart-4-15-fix (#2601)
