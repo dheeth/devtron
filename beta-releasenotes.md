@@ -30,6 +30,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- chore: Release action update for new release process (#2610)
 - Fix ingress new-legacy issue (#2583)
 - Ingress pathtype if condition update (#2592)
 - Ci Build config API backward compatibilty (#2598)
