@@ -39,6 +39,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- Ci Build config API backward compatibilty (#2598)
 - merge main into ref-chart-4-15-fix (#2601)
 - Enforcer RBAC Cache Override Fix (#2608)
 - chore: Release action update for new release process (#2610)
