@@ -27,6 +27,7 @@
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
 ## Documentation
+- docs: fix in gcp installation and configuration command (#2614)
 - docs: Added buildpack doc (#2543)
 - docs: updated doc for aws secret manager  (#2591)
 - docs: Modified the devtron install cmd with gcp cloud (#2580)
