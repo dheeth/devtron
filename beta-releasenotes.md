@@ -34,6 +34,7 @@
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
 - feat: App workflow and env overrides Clone and Delete api. (#2565)
 ## Documentation
+- docs: Added buildpack doc (#2543)
 - docs: updated doc for aws secret manager  (#2591)
 - docs: fix in gcp installation and configuration command (#2614)
 - doc: broken hyperlinks in doc fix (#2621)
