@@ -43,6 +43,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- chore: Release action update for new release process (#2610)
 - chore: Created release.txt for comparison in nightly releases (#2611)
 - chore: Removed changelog section from action (#2615)
 - Docker checkout path Fix (#2616)
