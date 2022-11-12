@@ -49,6 +49,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- feat : Auto inject Image pull secret while deploying devtron-app (#2547)
 - Telemetry modifications (#2567)
 - Fix ingress new-legacy issue (#2583)
 - chore: Created update-release-notes.yml github action (#2587)
