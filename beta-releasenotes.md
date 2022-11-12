@@ -49,6 +49,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- Fix ingress new-legacy issue (#2583)
 - chore: Created update-release-notes.yml github action (#2587)
 - Ingress pathtype if condition update (#2592)
 - Ci Build config API backward compatibilty (#2598)
