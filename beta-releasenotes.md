@@ -42,6 +42,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- Docker checkout path Fix (#2616)
 - chore: Updated stable to beta for nightly release (#2619)
 - feat : Auto inject Image pull secret while deploying devtron-app (#2547)
 - Telemetry modifications (#2567)
