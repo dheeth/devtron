@@ -1,4 +1,5 @@
 ## Bugs
+- fix: updated devtron-reference-chart directory (#2603)
 - fix: health fix for nodes in resource tree for missing state (#2606)
 - fix: updated wiring for TelemetryEventClientExtended.go (#2588)
 - fix: sql script semicolon fix (#2590)
