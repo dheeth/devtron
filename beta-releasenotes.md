@@ -1,4 +1,5 @@
 ## Bugs
+- fix: health fix for nodes in resource tree for missing state (#2606)
 - fix: deploymentApp creation check update (#2600)
 - fix: health fix for nodes in resource tree for missing state (#2606)
 - fix: updated wiring for TelemetryEventClientExtended.go (#2588)
