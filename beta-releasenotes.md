@@ -64,6 +64,7 @@
 - Docs: Added basic GUI for rollout deployment (#2516)
 - Docs: Added basic GUI for rollout deployment (#2516)
 ## Others
+- Telemetry modifications (#2567)
 - chore: Created update-release-notes.yml github action (#2587)
 - Enforcer RBAC Cache Override Fix (#2608)
 - chore: Release action update for new release process (#2610)
