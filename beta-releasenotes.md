@@ -1,4 +1,5 @@
 ## Bugs
+- fix: sql scripts for replacing CronJob & Job chart name to Job & CronJob in tables (#2638)
 - Fix: user re create with super admin permission fix. (#2645)
 - fix: deploymentApp creation check update (#2600)
 - fix: updated devtron-reference-chart directory (#2603)
