@@ -1,4 +1,5 @@
 ## Bugs
+- Fix: user re create with super admin permission fix. (#2645)
 - fix: deploymentApp creation check update (#2600)
 - fix: updated devtron-reference-chart directory (#2603)
 - fix: health fix for nodes in resource tree for missing state (#2606)
