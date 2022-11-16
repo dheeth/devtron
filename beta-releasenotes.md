@@ -31,6 +31,7 @@
 - Fix: Updated username for Prakarsh (#2575)
 - fix: showing cicd module status as installing if devtron is installing with cicd module (#2576)
 ## Enhancements
+- feat: Exposed Devtron docker image in container as variable (#2639)
 - feat: Provide description for Chart Types (#2585)
 - feat: Provide description for Chart Types (#2585)
 - feat: Provide description for Chart Types (#2585)
