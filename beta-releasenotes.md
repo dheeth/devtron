@@ -1,4 +1,5 @@
 ## Bugs
+- Fix: user re create with super admin permission fix. (#2645)
 - fix: changed the description for chart types, written update sql scripts (#2632)
 - fix: sql scripts for replacing CronJob & Job chart name to Job & CronJob in tables (#2638)
 - Fix: user re create with super admin permission fix. (#2645)
