@@ -39,6 +39,7 @@
 - Fix: Updated username for Prakarsh (#2575)
 - fix: showing cicd module status as installing if devtron is installing with cicd module (#2576)
 ## Enhancements
+- Feat: Adding a Deployment Helm-chart (#2391)
 - feat: Exposed Devtron docker image in container as variable (#2639)
 - Feat: Adding a Deployment Helm-chart (#2391)
 - feat: Exposed Devtron docker image in container as variable (#2639)
